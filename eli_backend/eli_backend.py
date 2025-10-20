@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
-import language_tool_python
+# import language_tool_python
 
 app = Flask(__name__)
-tool = language_tool_python.LanguageTool('en-US')
+#tool = language_tool_python.LanguageTool('en-US')
 
 # Diccionario de respuestas por palabra clave
 respuestas_contextuales = {
@@ -19,20 +19,25 @@ respuestas_contextuales = {
 
 # Función para detectar errores gramaticales
 def detectar_errores(frase_usuario):
-    errores = tool.check(frase_usuario)
-    if errores:
-        mensaje = errores[0].message
-        sugerencia = errores[0].replacements[0] if errores[0].replacements else "Revisa la estructura"
-        return {
-            "estado": "incorrecta",
-            "correccion": sugerencia,
-            "invitacion_a_repetir": f"Por favor, intenta decirlo así: '{sugerencia}'",
-            "retroalimentacion": f"{mensaje}. ¿Puedes repetirlo en voz alta?"
-        }
-    else:
-        return {
-            "estado": "correcta",
-            "retroalimentacion": "¡Muy bien! Tu frase está correctamente estructurada."
+   # errores = tool.check(frase_usuario)
+    #if errores:
+     #   mensaje = errores[0].message
+      #  sugerencia = errores[0].replacements[0] if errores[0].replacements else "Revisa la estructura"
+       # return {
+        #    "estado": "incorrecta",
+         #  "correccion": sugerencia,
+          #  "invitacion_a_repetir": f"Por favor, intenta decirlo así: '{sugerencia}'",
+          
+          #  "retroalimentacion": f"{mensaje}. ¿Puedes repetirlo en voz alta?"
+  #      }
+    #else:
+     #   return {
+      #      "estado": "correcta",
+       #     "retroalimentacion": "¡Muy bien! Tu frase está correctamente estructurada."
+        #}
+    return {
+    "estado": "correcta",
+    "retroalimentacion": "¡Gracias! Eli recibió tu frase. Pronto te dará retroalimentación más precisa."
         }
 
 # Función para generar respuesta contextual
