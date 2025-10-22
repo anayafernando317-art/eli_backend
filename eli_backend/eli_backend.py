@@ -1,64 +1,57 @@
 from flask import Flask, request, jsonify
-# import language_tool_python
+import requests
+from flask_cors import CORS
 
 app = Flask(__name__)
-#tool = language_tool_python.LanguageTool('en-US')
+CORS(app)
 
-# Diccionario de respuestas por palabra clave
-respuestas_contextuales = {
-    "beach": "Do you like swimming or just relaxing?",
-    "school": "What subject do you enjoy the most?",
-    "iguana": "Wow! Did you take a picture of the iguana?",
-    "acapulco": "Acapulco is beautiful. Did you visit La Quebrada?",
-    "food": "Yum! What kind of food do you like?",
-    "music": "Nice! What kind of music do you listen to?",
-    "travel": "Traveling is amazing. Where would you like to go next?",
-    "done": "Great job today! Your English is improving. Keep practicing!",
-    "thanks": "You're welcome! I'm here whenever you want to practice."
-}
-
-# Función para detectar errores gramaticales
-def detectar_errores(frase_usuario):
-   # errores = tool.check(frase_usuario)
-    #if errores:
-     #   mensaje = errores[0].message
-      #  sugerencia = errores[0].replacements[0] if errores[0].replacements else "Revisa la estructura"
-       # return {
-        #    "estado": "incorrecta",
-         #  "correccion": sugerencia,
-          #  "invitacion_a_repetir": f"Por favor, intenta decirlo así: '{sugerencia}'",
-          
-          #  "retroalimentacion": f"{mensaje}. ¿Puedes repetirlo en voz alta?"
-  #      }
-    #else:
-     #   return {
-      #      "estado": "correcta",
-       #     "retroalimentacion": "¡Muy bien! Tu frase está correctamente estructurada."
-        #}
-    return {
-    "estado": "correcta",
-    "retroalimentacion": "¡Gracias! Eli recibió tu frase. Pronto te dará retroalimentación más precisa."
-        }
-
-# Función para generar respuesta contextual
-def generar_respuesta(frase_usuario):
-    frase_lower = frase_usuario.lower()
-    for palabra, respuesta in respuestas_contextuales.items():
-        if palabra in frase_lower:
-            return respuesta
-    return "Interesting! Tell me more."
-
-# Endpoint principal
 @app.route('/conversar', methods=['POST'])
 def conversar():
-    data = request.json
-    frase = data.get('frase')
+    data = request.get_json()
+    frase_usuario = data.get('frase_usuario', '')
 
-    resultado = detectar_errores(frase)
-    respuesta_contextual = generar_respuesta(frase)
+    if not frase_usuario.strip():
+        return jsonify({
+            "estado": "error",
+            "retroalimentacion": "No recibí ninguna frase. ¿Puedes intentarlo de nuevo?"
+        }), 400
 
-    resultado["respuesta_contextual"] = respuesta_contextual
-    return jsonify(resultado)
+    # Llamada a la API de LanguageTool
+    try:
+        lt_response = requests.post(
+            'https://api.languagetoolplus.com/v2/check',
+            data={
+                'text': frase_usuario,
+                'language': 'es'
+            }
+        )
+        result = lt_response.json()
+        errores = result.get('matches', [])
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        if errores:
+            primer_error = errores[0]
+            mensaje = primer_error['message']
+            sugerencia = primer_error['replacements'][0] if primer_error['replacements'] else "Revisa la estructura"
+
+            return jsonify({
+                "estado": "incorrecta",
+                "correccion": sugerencia,
+                "invitacion_a_repetir": f"Por favor, intenta decirlo así: '{sugerencia}'",
+                "retroalimentacion": f"{mensaje}. ¿Puedes repetirlo en voz alta?"
+            })
+
+        else:
+            return jsonify({
+                "estado": "correcta",
+                "retroalimentacion": "¡Muy bien! Tu frase está correctamente estructurada."
+            })
+
+    except Exception as e:
+        return jsonify({
+            "estado": "error",
+            "retroalimentacion": f"Ocurrió un error al analizar tu frase: {str(e)}"
+        }), 500
+
+@app.route('/')
+def home():
+    return "Eli está en línea. Usa /conversar para enviar frases.", 200
