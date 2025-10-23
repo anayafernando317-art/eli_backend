@@ -1,57 +1,87 @@
 from flask import Flask, request, jsonify
-import requests
 from flask_cors import CORS
+import language_tool_python
+import requests
+import random
 
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/conversar', methods=['POST'])
+tool = language_tool_python.LanguageTool('es')
+historial = []
+
+# Traducción al inglés usando LibreTranslate
+def traducir_al_ingles(texto):
+    url = "https://libretranslate.de/translate"
+    payload = {
+        "q": texto,
+        "source": "es",
+        "target": "en",
+        "format": "text"
+    }
+    response = requests.post(url, json=payload)
+    return response.json()["translatedText"]
+
+# Corrección gramatical con explicación
+def analizar_errores(frase):
+    matches = tool.check(frase)
+    errores = []
+    for m in matches:
+        if m.ruleIssueType in ['grammar', 'misspelling']:
+            errores.append({
+                "mensaje": m.message,
+                "original": frase[m.offset:m.offset + m.errorLength],
+                "sugerencia": m.replacements[0] if m.replacements else ""
+            })
+    return errores
+
+# Preguntas naturales para mantener la conversación
+def generar_pregunta():
+    preguntas = [
+        "What do you like to do on weekends?",
+        "Do you have any pets?",
+        "What’s your favorite food?",
+        "Where would you like to travel?",
+        "What do you usually eat for breakfast?",
+        "What kind of music do you enjoy?"
+    ]
+    return random.choice(preguntas)
+
+@app.route("/")
+def home():
+    return "Eli está en línea. Usa /conversar para enviar frases."
+
+@app.route("/conversar", methods=["POST"])
 def conversar():
     data = request.get_json()
-    frase_usuario = data.get('frase_usuario', '')
+    frase_usuario = data.get("frase_usuario", "")
+    
+    errores = analizar_errores(frase_usuario)
 
-    if not frase_usuario.strip():
-        return jsonify({
-            "estado": "error",
-            "retroalimentacion": "No recibí ninguna frase. ¿Puedes intentarlo de nuevo?"
-        }), 400
-
-    # Llamada a la API de LanguageTool
-    try:
-        lt_response = requests.post(
-            'https://api.languagetoolplus.com/v2/check',
-            data={
-                'text': frase_usuario,
-                'language': 'es'
-            }
+    if errores:
+        # Corrige y explica el error
+        error = errores[0]
+        respuesta = (
+            f"Let's fix that: '{error['original']}' should be '{error['sugerencia']}'. "
+            f"{error['mensaje']}"
         )
-        result = lt_response.json()
-        errores = result.get('matches', [])
-
-        if errores:
-            primer_error = errores[0]
-            mensaje = primer_error['message']
-            sugerencia = primer_error['replacements'][0] if primer_error['replacements'] else "Revisa la estructura"
-
-            return jsonify({
-                "estado": "incorrecta",
-                "correccion": sugerencia,
-                "invitacion_a_repetir": f"Por favor, intenta decirlo así: '{sugerencia}'",
-                "retroalimentacion": f"{mensaje}. ¿Puedes repetirlo en voz alta?"
-            })
-
-        else:
-            return jsonify({
-                "estado": "correcta",
-                "retroalimentacion": "¡Muy bien! Tu frase está correctamente estructurada."
-            })
-
-    except Exception as e:
+        historial.append({"usuario": frase_usuario, "eli": respuesta})
         return jsonify({
-            "estado": "error",
-            "retroalimentacion": f"Ocurrió un error al analizar tu frase: {str(e)}"
-        }), 500
+            "respuesta": respuesta,
+            "repetir": True,
+            "historial": historial
+        })
+    else:
+        # Traduce y continúa la conversación con una pregunta
+        traduccion = traducir_al_ingles(frase_usuario)
+        pregunta = generar_pregunta()
+        respuesta = f"{traduccion}. {pregunta}"
+        historial.append({"usuario": frase_usuario, "eli": respuesta})
+        return jsonify({
+            "respuesta": respuesta,
+            "repetir": False,
+            "historial": historial
+        })
 
-@app.route('/')
-def home():
-    return "Eli está en línea. Usa /conversar para enviar frases.", 200
+if __name__ == "__main__":
+    app.run()
