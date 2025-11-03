@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import whisper
-from difflib import SequenceMatcher
 import random
 import os
 import traceback
@@ -24,9 +23,6 @@ def generar_pregunta():
     ]
     return random.choice(preguntas)
 
-# 🗣️ Frase esperada para comparar
-frase_esperada = "hello how are you"
-
 @app.route("/conversar_audio", methods=["POST"])
 def conversar_audio():
     audio = request.files.get("audio")
@@ -37,7 +33,7 @@ def conversar_audio():
     audio.save(ruta_audio)
 
     try:
-        modelo_whisper = whisper.load_model("tiny")  # ✅ Más ligero para Render Free
+        modelo_whisper = whisper.load_model("tiny")  # ✅ Ligero para Render Free
         resultado = modelo_whisper.transcribe(ruta_audio)
         texto_usuario = resultado.get("text", "").strip().lower()
         print(f"🗣️ Transcripción: {texto_usuario}")
@@ -46,22 +42,20 @@ def conversar_audio():
             raise ValueError("Transcripción vacía")
 
     except Exception as e:
-        print("❌ Error al transcribir:")
+        print(f"❌ Error al transcribir: {e}")
         traceback.print_exc()
         return jsonify({"error": "Error al procesar el audio"}), 500
     finally:
         if os.path.exists(ruta_audio):
             os.remove(ruta_audio)
 
-    similitud = SequenceMatcher(None, frase_esperada, texto_usuario).ratio()
-    print(f"📊 Similitud: {similitud:.2f}")
-
-    if similitud < 0.8:
-        retro = f"It sounded like '{texto_usuario}'. Try saying: {frase_esperada}"
-        respuesta = f"{retro} Let's try again: {frase_esperada}"
-    else:
+    # ✅ Respuesta libre sin comparación
+    if texto_usuario:
         retro = None
-        respuesta = f"Great! {generar_pregunta()}"
+        respuesta = f"Thanks for sharing! {generar_pregunta()}"
+    else:
+        retro = "I couldn't hear anything. Try speaking a bit louder or longer."
+        respuesta = "Let's try again. Say anything you'd like!"
 
     historial.append({
         "usuario": texto_usuario,
