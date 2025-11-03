@@ -1,41 +1,20 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import language_tool_python
-import requests
+import whisper
+from difflib import SequenceMatcher
 import random
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-tool = language_tool_python.LanguageTool('es')
+# 🔊 Carga el modelo Whisper
+modelo_whisper = whisper.load_model("base")
+
+# 🧠 Historial en memoria
 historial = []
 
-# Traducción al inglés usando LibreTranslate
-def traducir_al_ingles(texto):
-    url = "https://libretranslate.de/translate"
-    payload = {
-        "q": texto,
-        "source": "es",
-        "target": "en",
-        "format": "text"
-    }
-    response = requests.post(url, json=payload)
-    return response.json()["translatedText"]
-
-# Corrección gramatical con explicación
-def analizar_errores(frase):
-    matches = tool.check(frase)
-    errores = []
-    for m in matches:
-        if m.ruleIssueType in ['grammar', 'misspelling']:
-            errores.append({
-                "mensaje": m.message,
-                "original": frase[m.offset:m.offset + m.errorLength],
-                "sugerencia": m.replacements[0] if m.replacements else ""
-            })
-    return errores
-
-# Preguntas naturales para mantener la conversación
+# 🎯 Preguntas que Eli puede hacer
 def generar_pregunta():
     preguntas = [
         "What do you like to do on weekends?",
@@ -47,41 +26,47 @@ def generar_pregunta():
     ]
     return random.choice(preguntas)
 
-@app.route("/")
-def home():
-    return "Eli está en línea. Usa /conversar para enviar frases."
+# 🗣️ Frase esperada para comparar
+frase_esperada = "hello how are you"
 
-@app.route("/conversar", methods=["POST"])
-def conversar():
-    data = request.get_json()
-    frase_usuario = data.get("frase_usuario", "")
-    
-    errores = analizar_errores(frase_usuario)
+@app.route("/conversar_audio", methods=["POST"])
+def conversar_audio():
+    audio = request.files.get("audio")
+    if not audio:
+        return jsonify({"error": "No se recibió archivo de audio"}), 400
 
-    if errores:
-        # Corrige y explica el error
-        error = errores[0]
-        respuesta = (
-            f"Let's fix that: '{error['original']}' should be '{error['sugerencia']}'. "
-            f"{error['mensaje']}"
-        )
-        historial.append({"usuario": frase_usuario, "eli": respuesta})
-        return jsonify({
-            "respuesta": respuesta,
-            "repetir": True,
-            "historial": historial
-        })
+    ruta_audio = "temp.wav"
+    audio.save(ruta_audio)
+
+    try:
+        resultado = modelo_whisper.transcribe(ruta_audio)
+        texto_usuario = resultado["text"].lower()
+        print(f"🗣️ Transcripción: {texto_usuario}")
+    except Exception as e:
+        print(f"❌ Error al transcribir: {e}")
+        return jsonify({"error": "Error al procesar el audio"}), 500
+    finally:
+        if os.path.exists(ruta_audio):
+            os.remove(ruta_audio)
+
+    similitud = SequenceMatcher(None, frase_esperada, texto_usuario).ratio()
+    print(f"📊 Similitud: {similitud:.2f}")
+
+    if similitud < 0.8:
+        retro = f"It sounded like '{texto_usuario}'. Try saying: {frase_esperada}"
+        respuesta = f"{retro} Let's try again: {frase_esperada}"
     else:
-        # Traduce y continúa la conversación con una pregunta
-        traduccion = traducir_al_ingles(frase_usuario)
-        pregunta = generar_pregunta()
-        respuesta = f"{traduccion}. {pregunta}"
-        historial.append({"usuario": frase_usuario, "eli": respuesta})
-        return jsonify({
-            "respuesta": respuesta,
-            "repetir": False,
-            "historial": historial
-        })
+        retro = None
+        respuesta = f"Great! {generar_pregunta()}"
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    historial.append({
+        "usuario": texto_usuario,
+        "eli": respuesta,
+        "retroalimentacion": retro
+    })
+
+    return jsonify({
+        "respuesta": respuesta,
+        "retroalimentacion": retro,
+        "historial": historial
+    })

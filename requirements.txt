@@ -3,3 +3,8 @@ flask-cors
 requests
 language_tool_python
 gunicorn
+
+# 🔊 Transcripción con Whisper
+openai-whisper
+torch
+numpy

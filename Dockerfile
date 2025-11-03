@@ -13,4 +13,4 @@ WORKDIR /app
 
 EXPOSE 5000
 
-CMD ["python", "eli_backend.py"]
+CMD ["gunicorn", "eli_backend:app", "--bind", "0.0.0.0:5000"]
