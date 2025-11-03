@@ -70,3 +70,6 @@ def conversar_audio():
         "retroalimentacion": retro,
         "historial": historial
     })
+@app.route("/")
+def index():
+    return "Eli está vivo y escuchando 👂", 200
