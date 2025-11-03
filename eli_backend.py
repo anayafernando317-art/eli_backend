@@ -4,6 +4,7 @@ import whisper
 from difflib import SequenceMatcher
 import random
 import os
+import traceback
 
 app = Flask(__name__)
 CORS(app)
@@ -36,12 +37,17 @@ def conversar_audio():
     audio.save(ruta_audio)
 
     try:
-        modelo_whisper = whisper.load_model("base")  # ✅ Carga diferida
+        modelo_whisper = whisper.load_model("tiny")  # ✅ Más ligero para Render Free
         resultado = modelo_whisper.transcribe(ruta_audio)
-        texto_usuario = resultado["text"].lower()
+        texto_usuario = resultado.get("text", "").strip().lower()
         print(f"🗣️ Transcripción: {texto_usuario}")
+
+        if not texto_usuario:
+            raise ValueError("Transcripción vacía")
+
     except Exception as e:
-        print(f"❌ Error al transcribir: {e}")
+        print("❌ Error al transcribir:")
+        traceback.print_exc()
         return jsonify({"error": "Error al procesar el audio"}), 500
     finally:
         if os.path.exists(ruta_audio):
@@ -71,6 +77,6 @@ def conversar_audio():
 
 @app.route("/")
 def index():
-    return "Eli está vivo y escuchando 👂", 200
+    return "✅ Eli está vivo y escuchando 👂", 200
 
 print("✅ Eli backend cargado correctamente")
