@@ -8,9 +8,6 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# 🔊 Carga el modelo Whisper
-modelo_whisper = whisper.load_model("base")
-
 # 🧠 Historial en memoria
 historial = []
 
@@ -39,6 +36,7 @@ def conversar_audio():
     audio.save(ruta_audio)
 
     try:
+        modelo_whisper = whisper.load_model("base")  # ✅ Carga diferida
         resultado = modelo_whisper.transcribe(ruta_audio)
         texto_usuario = resultado["text"].lower()
         print(f"🗣️ Transcripción: {texto_usuario}")
@@ -70,6 +68,9 @@ def conversar_audio():
         "retroalimentacion": retro,
         "historial": historial
     })
+
 @app.route("/")
 def index():
     return "Eli está vivo y escuchando 👂", 200
+
+print("✅ Eli backend cargado correctamente")
