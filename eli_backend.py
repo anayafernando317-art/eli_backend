@@ -8,10 +8,8 @@ import traceback
 app = Flask(__name__)
 CORS(app)
 
-# 🧠 Historial en memoria
 historial = []
 
-# 🎯 Preguntas que Eli puede hacer
 def generar_pregunta():
     preguntas = [
         "What do you like to do on weekends?",
@@ -33,7 +31,10 @@ def conversar_audio():
     audio.save(ruta_audio)
 
     try:
-        modelo_whisper = whisper.load_model("tiny")  # ✅ Ligero para Render Free
+        if os.path.getsize(ruta_audio) < 1000:
+            raise ValueError("Archivo demasiado pequeño para transcribir")
+
+        modelo_whisper = whisper.load_model("tiny")
         resultado = modelo_whisper.transcribe(ruta_audio)
         texto_usuario = resultado.get("text", "").strip().lower()
         print(f"🗣️ Transcripción: {texto_usuario}")
@@ -49,23 +50,17 @@ def conversar_audio():
         if os.path.exists(ruta_audio):
             os.remove(ruta_audio)
 
-    # ✅ Respuesta libre sin comparación
-    if texto_usuario:
-        retro = None
-        respuesta = f"Thanks for sharing! {generar_pregunta()}"
-    else:
-        retro = "I couldn't hear anything. Try speaking a bit louder or longer."
-        respuesta = "Let's try again. Say anything you'd like!"
-
+    respuesta = f"Thanks for sharing! {generar_pregunta()}"
     historial.append({
         "usuario": texto_usuario,
         "eli": respuesta,
-        "retroalimentacion": retro
+        "retroalimentacion": None
     })
 
     return jsonify({
         "respuesta": respuesta,
-        "retroalimentacion": retro,
+        "retroalimentacion": None,
+        "transcripcion": texto_usuario,
         "historial": historial
     })
 
