@@ -3,7 +3,10 @@ FROM python:3.10
 # Instala Java (requerido por language-tool-python)
 RUN apt-get update && apt-get install -y default-jre
 
-# Instala dependencias
+# 🔊 Instala ffmpeg para convertir audio
+RUN apt-get install -y ffmpeg
+
+# Instala dependencias Python
 COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt

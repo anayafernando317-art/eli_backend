@@ -4,6 +4,7 @@ import whisper
 import random
 import os
 import traceback
+import subprocess
 
 app = Flask(__name__)
 CORS(app)
@@ -21,21 +22,36 @@ def generar_pregunta():
     ]
     return random.choice(preguntas)
 
+def convertir_a_wav(input_path, output_path):
+    comando = [
+        "ffmpeg", "-y",
+        "-i", input_path,
+        "-ac", "1",
+        "-ar", "16000",
+        "-sample_fmt", "s16",
+        output_path
+    ]
+    subprocess.run(comando, check=True)
+
 @app.route("/conversar_audio", methods=["POST"])
 def conversar_audio():
     audio = request.files.get("audio")
     if not audio:
         return jsonify({"error": "No se recibió archivo de audio"}), 400
 
-    ruta_audio = "temp.wav"
-    audio.save(ruta_audio)
+    original_path = "temp_original.aac"
+    wav_path = "temp.wav"
 
     try:
-        if os.path.getsize(ruta_audio) < 1000:
+        audio.save(original_path)
+
+        if os.path.getsize(original_path) < 1000:
             raise ValueError("Archivo demasiado pequeño para transcribir")
 
+        convertir_a_wav(original_path, wav_path)
+
         modelo_whisper = whisper.load_model("tiny")
-        resultado = modelo_whisper.transcribe(ruta_audio)
+        resultado = modelo_whisper.transcribe(wav_path)
         texto_usuario = resultado.get("text", "").strip().lower()
         print(f"🗣️ Transcripción: {texto_usuario}")
 
@@ -47,8 +63,9 @@ def conversar_audio():
         traceback.print_exc()
         return jsonify({"error": "Error al procesar el audio"}), 500
     finally:
-        if os.path.exists(ruta_audio):
-            os.remove(ruta_audio)
+        for path in [original_path, wav_path]:
+            if os.path.exists(path):
+                os.remove(path)
 
     respuesta = f"Thanks for sharing! {generar_pregunta()}"
     historial.append({
