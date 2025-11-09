@@ -140,7 +140,7 @@ def conversar_audio():
 
         # Transcribir con Whisper
         print("🎯 Transcribiendo audio...")
-        modelo_whisper = whisper.load_model("base")
+        modelo_whisper = whisper.load_model("tiny")
         resultado = modelo_whisper.transcribe(wav_path)
         texto_usuario = resultado.get("text", "").strip()
         
