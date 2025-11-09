@@ -1,10 +1,10 @@
-flask
-flask-cors
-requests
-language_tool_python
-gunicorn
-
-# 🔊 Transcripción con Whisper
-openai-whisper
-torch
-numpy
+flask==2.3.3
+flask-cors==4.0.0
+openai-whisper==20231117
+torch==2.1.0
+numpy==1.24.3
+pydub==0.25.1
+speechrecognition==3.10.0
+ffmpeg-python==0.2.0
+python-dotenv==1.0.0
+gunicorn==21.2.0
