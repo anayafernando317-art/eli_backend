@@ -1,10 +1,7 @@
-FROM python:3.10
+FROM python:3.10-slim
 
-# Instala Java (requerido por language-tool-python)
-RUN apt-get update && apt-get install -y default-jre
-
-# 🔊 Instala ffmpeg para convertir audio
-RUN apt-get install -y ffmpeg
+# Instala ffmpeg para pydub
+RUN apt-get update && apt-get install -y ffmpeg
 
 # Instala dependencias Python
 COPY requirements.txt .

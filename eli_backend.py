@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import whisper
+import speech_recognition as sr
 import random
 import os
 import traceback
-import subprocess
+from pydub import AudioSegment
+import io
 import tempfile
 
 app = Flask(__name__)
@@ -27,22 +28,64 @@ def generar_pregunta():
     ]
     return random.choice(preguntas)
 
-def convertir_a_wav(input_path, output_path):
-    """Convierte audio a formato WAV compatible"""
-    comando = [
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-ac", "1",
-        "-ar", "16000", 
-        "-acodec", "pcm_s16le",
-        output_path
-    ]
-    subprocess.run(comando, check=True, capture_output=True)
+def procesar_audio(audio_file):
+    """Convierte cualquier formato de audio a WAV compatible usando pydub"""
+    try:
+        # Leer el archivo de audio
+        audio_bytes = audio_file.read()
+        
+        # Determinar formato basado en extensión o contenido
+        if audio_file.filename and audio_file.filename.lower().endswith('.m4a'):
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format="m4a")
+        elif audio_file.filename and audio_file.filename.lower().endswith('.mp3'):
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
+        elif audio_file.filename and audio_file.filename.lower().endswith('.wav'):
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format="wav")
+        else:
+            # Intentar detección automática
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+        
+        # Convertir a formato óptimo para reconocimiento de voz
+        audio = audio.set_channels(1)  # Mono
+        audio = audio.set_frame_rate(16000)  # 16kHz
+        audio = audio.set_sample_width(2)  # 16-bit
+        
+        # Calcular duración
+        duracion_audio = len(audio) / 1000.0  # pydub devuelve en milisegundos
+        
+        # Exportar a WAV en memoria
+        wav_buffer = io.BytesIO()
+        audio.export(wav_buffer, format="wav")
+        wav_buffer.seek(0)
+        
+        return wav_buffer, duracion_audio
+        
+    except Exception as e:
+        raise Exception(f"Error procesando audio: {str(e)}")
+
+def transcribir_audio(wav_buffer):
+    """Transcribe audio usando Google Web Speech API"""
+    recognizer = sr.Recognizer()
+    
+    try:
+        with sr.AudioFile(wav_buffer) as source:
+            # Ajustar para ruido ambiental
+            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            audio_data = recognizer.record(source)
+            
+            # Usar Google Web Speech API (gratuita)
+            texto = recognizer.recognize_google(audio_data, language='en-US')
+            return texto.strip()
+            
+    except sr.UnknownValueError:
+        return ""  # No se pudo entender el audio
+    except sr.RequestError as e:
+        raise Exception(f"Error con el servicio de reconocimiento: {e}")
 
 def evaluar_pronunciacion_simple(texto_transcrito, audio_duration):
-    """Evaluación simple de pronunciación sin librosa"""
+    """Evaluación simple de pronunciación"""
     try:
-        # Métricas básicas sin análisis complejo
+        # Métricas básicas
         palabras = texto_transcrito.split()
         total_palabras = len(palabras)
         
@@ -52,13 +95,13 @@ def evaluar_pronunciacion_simple(texto_transcrito, audio_duration):
         else:
             longitud_score = min(total_palabras / 8.0, 1.0)
         
-        # Score basado en duración del audio (evitar audio muy corto)
+        # Score basado en duración del audio
         duracion_score = min(audio_duration / 3.0, 1.0)  # 3 segundos = score 1.0
         
-        # Score de pronunciación general (simulado)
+        # Score de pronunciación general
         pronunciacion_score = (longitud_score + duracion_score) / 2.0
         
-        # Generar retroalimentación simple
+        # Generar retroalimentación
         comentarios = []
         
         if total_palabras < 2:
@@ -80,11 +123,11 @@ def evaluar_pronunciacion_simple(texto_transcrito, audio_duration):
         
         return {
             "pronunciacion_score": round(pronunciacion_score, 2),
-            "fluidez_score": round(pronunciacion_score * 0.8, 2),  # Simulado
+            "fluidez_score": round(pronunciacion_score * 0.8, 2),
             "longitud_score": round(longitud_score, 2),
             "duracion_audio": round(audio_duration, 2),
             "total_palabras": total_palabras,
-            "comentarios": comentarios[:2]  # Máximo 2 comentarios
+            "comentarios": comentarios[:2]
         }
         
     except Exception as e:
@@ -110,39 +153,26 @@ def conversar_audio():
 
     audio_file = request.files['audio']
     
-    # Crear archivos temporales
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.m4a') as temp_original:
-        original_path = temp_original.name
-        audio_file.save(original_path)
-
-    wav_path = original_path + ".wav"
-
     try:
         # Verificar tamaño del archivo
-        if os.path.getsize(original_path) < 1000:
+        audio_file.seek(0, 2)  # Ir al final
+        file_size = audio_file.tell()
+        audio_file.seek(0)  # Volver al inicio
+        
+        if file_size < 1000:
             return jsonify({
                 "estado": "error",
                 "retroalimentacion": "Archivo de audio demasiado pequeño",
                 "respuesta": "The audio file is too short. Please record for at least 2-3 seconds."
             }), 400
 
-        # Convertir a WAV
-        print("🔄 Convirtiendo audio a WAV...")
-        convertir_a_wav(original_path, wav_path)
+        # Procesar audio (conversión y obtener duración)
+        print("🔄 Procesando audio...")
+        wav_buffer, duracion_audio = procesar_audio(audio_file)
 
-        # Obtener duración del audio
-        comando_duracion = [
-            "ffprobe", "-v", "error", "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1", wav_path
-        ]
-        resultado_duracion = subprocess.run(comando_duracion, capture_output=True, text=True)
-        duracion_audio = float(resultado_duracion.stdout.strip()) if resultado_duracion.stdout else 0
-
-        # Transcribir con Whisper
+        # Transcribir audio
         print("🎯 Transcribiendo audio...")
-        modelo_whisper = whisper.load_model("tiny")
-        resultado = modelo_whisper.transcribe(wav_path)
-        texto_usuario = resultado.get("text", "").strip()
+        texto_usuario = transcribir_audio(wav_buffer)
         
         print(f"🗣️ Transcripción: {texto_usuario}")
 
@@ -153,7 +183,7 @@ def conversar_audio():
                 "respuesta": "I couldn't hear any speech. Please try again and speak clearly."
             }), 400
 
-        # Evaluar pronunciación (versión simple)
+        # Evaluar pronunciación
         print("📊 Evaluando pronunciación...")
         evaluacion = evaluar_pronunciacion_simple(texto_usuario, duracion_audio)
 
@@ -183,31 +213,14 @@ def conversar_audio():
             "historial": historial[-5:]
         })
 
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Error en conversión de audio: $e")
-        return jsonify({
-            "estado": "error",
-            "retroalimentacion": "Error procesando el formato de audio",
-            "respuesta": "There was an issue with the audio format. Please try again."
-        }), 500
-        
     except Exception as e:
-        print(f"❌ Error general: $e")
+        print(f"❌ Error general: {e}")
         traceback.print_exc()
         return jsonify({
             "estado": "error",
-            "retroalimentacion": f"Error interno del servidor: {str(e)}",
+            "retroalimentacion": f"Error procesando audio: {str(e)}",
             "respuesta": "Sorry, there was a technical issue. Please try again."
         }), 500
-        
-    finally:
-        # Limpiar archivos temporales
-        for path in [original_path, wav_path]:
-            if os.path.exists(path):
-                try:
-                    os.remove(path)
-                except:
-                    pass
 
 @app.route("/conversar", methods=["POST"])
 def conversar():
@@ -241,7 +254,7 @@ def health_check():
     return jsonify({
         "estado": "online",
         "mensaje": "✅ Eli está vivo y escuchando 👂",
-        "modelo_whisper": "cargado"
+        "servicio_transcripcion": "Google Web Speech API"
     }), 200
 
 @app.route("/")
@@ -249,10 +262,12 @@ def index():
     return "✅ Eli Pronunciation Analyzer is running! Use /conversar_audio for audio analysis.", 200
 
 if __name__ == "__main__":
-    print("✅ Eli backend cargado correctamente")
+    print("✅ Eli backend cargado correctamente con SpeechRecognition")
     print("🎯 Endpoints disponibles:")
     print("   POST /conversar_audio - Para análisis de pronunciación por audio")
     print("   POST /conversar - Para conversación por texto")
     print("   GET  /health - Para verificar estado del servidor")
     
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Configuración para Render
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
