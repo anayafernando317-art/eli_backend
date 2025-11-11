@@ -7,9 +7,13 @@ import traceback
 from pydub import AudioSegment
 import io
 import tempfile
+from googletrans import Translator
 
 app = Flask(__name__)
 CORS(app)
+
+# Inicializar el traductor
+translator = Translator()
 
 historial = []
 contexto_conversacion = {
@@ -18,7 +22,16 @@ contexto_conversacion = {
     "historial_reciente": []
 }
 
-print("✅ Eli AI - Backend inteligente cargado")
+print("✅ Eli AI - Backend inteligente cargado con traducciones")
+
+def traducir_texto(texto, destino='en'):
+    """Traduce texto usando Google Translate"""
+    try:
+        traduccion = translator.translate(texto, dest=destino)
+        return traduccion.text
+    except Exception as e:
+        print(f"❌ Error en traducción: {e}")
+        return None
 
 def analizar_intencion(texto_usuario):
     """Detecta qué tipo de respuesta necesita el usuario"""
@@ -54,6 +67,10 @@ def analizar_intencion(texto_usuario):
     if any(palabra in texto for palabra in palabras_ayuda):
         return "ayuda"
     
+    # Detectar si el texto está en español
+    if any(palabra in texto for palabra in ['hola', 'cómo', 'qué', 'dónde', 'cuándo', 'por qué', 'gracias']):
+        return "espanol"
+    
     # Por defecto, conversación normal
     return "conversacion"
 
@@ -70,7 +87,13 @@ def generar_respuesta_inteligente(texto_usuario, intencion):
                 idx = palabras.index(palabra_clave)
                 if idx + 1 < len(palabras):
                     palabra_a_traducir = ' '.join(palabras[idx+1:])
-                    return f"I understand you want to translate: '{palabra_a_traducir}'. As a pronunciation practice assistant, I focus on helping you speak English. For translations, you might want to use a dedicated translation app. But let's practice your speaking! {generar_pregunta()}"
+                    
+                    # ✅ TRADUCCIÓN REAL
+                    traduccion = traducir_texto(palabra_a_traducir, 'en')
+                    if traduccion:
+                        return f"✅ Translation: '{palabra_a_traducir}' → '{traduccion}'\n\nNow let's practice pronouncing it! Repeat after me: '{traduccion}'"
+                    else:
+                        return f"I understand you want to translate: '{palabra_a_traducir}'. While I focus on pronunciation practice, you can use translation apps for accurate translations. Let's practice speaking instead! {generar_pregunta()}"
         
         return f"I'd be happy to help with translations! Please tell me what specific word or phrase you'd like to translate. {generar_pregunta()}"
     
@@ -83,7 +106,14 @@ def generar_respuesta_inteligente(texto_usuario, intencion):
                 idx = palabras.index(palabra_clave)
                 if idx + 1 < len(palabras):
                     palabra_significado = ' '.join(palabras[idx+1:])
-                    return f"You're asking about the meaning of '{palabra_significado}'. That's great for vocabulary! While I specialize in pronunciation, understanding words is important too. Try using this word in a sentence so we can practice pronunciation!"
+                    
+                    # Si la palabra parece estar en español, traducirla
+                    if any(car in 'áéíóúñ' for car in palabra_significado):
+                        traduccion = traducir_texto(palabra_significado, 'en')
+                        if traduccion:
+                            return f"📖 The word '{palabra_significado}' in Spanish means '{traduccion}' in English. Let's practice saying it: '{traduccion}'"
+                    
+                    return f"📖 You're asking about the meaning of '{palabra_significado}'. That's great for vocabulary! Try using this word in a sentence so we can practice pronunciation!"
         
         return f"That's a great question about meaning! While I specialize in pronunciation practice, understanding vocabulary is also important. Could you rephrase that as a speaking practice? {generar_pregunta()}"
     
@@ -119,6 +149,14 @@ def generar_respuesta_inteligente(texto_usuario, intencion):
             "I'm here to help you practice English pronunciation! You can: Speak to me in English, Get feedback on your pronunciation, Practice conversation. Try saying something in English!"
         ]
         return f"{random.choice(ayuda)} {generar_pregunta()}"
+    
+    elif intencion == "espanol":
+        # Si el usuario habla en español, traducir y animar a practicar en inglés
+        traduccion = traducir_texto(texto_usuario, 'en')
+        if traduccion:
+            return f"🌎 I see you're speaking Spanish. In English, that would be: '{traduccion}'\n\nGreat job practicing! Now try saying it in English: '{traduccion}'"
+        else:
+            return f"🌎 I notice you're speaking Spanish. That's great! Let's practice the same phrase in English. Try saying: '{generar_pregunta()}'"
     
     else:
         # Conversación normal - responder contextualmente
@@ -411,7 +449,8 @@ def health_check():
         "servicio_transcripcion": "Google Web Speech API",
         "caracteristicas": [
             "Análisis de pronunciación",
-            "Detección de intenciones",
+            "Detección de intenciones", 
+            "Traducciones en tiempo real",
             "Respuestas contextuales",
             "Evaluación de fluidez"
         ],
@@ -470,12 +509,12 @@ def index():
     <body>
         <div class="container">
             <div class="success">🚀 Eli Backend funcionando</div>
-            <div class="info">✅ Conecta tu app Flutter aquí</div>
+            <div class="info">✅ Con traducciones en tiempo real</div>
             <div class="info">🎯 Endpoint principal: <strong>/conversar_audio</strong></div>
             <div class="info">🔍 Health: <a href="/health">/health</a></div>
             <div class="info">💬 Texto: <a href="/conversar">/conversar</a></div>
             <div class="info">🧠 Contexto: <a href="/contexto">/contexto</a></div>
-            <div class="info">🕐 Servidor activo y mejorado con inteligencia</div>
+            <div class="info">🌎 Ahora con soporte para traducciones Español-Inglés</div>
         </div>
     </body>
     </html>
@@ -490,6 +529,7 @@ if __name__ == "__main__":
     print("   GET  /contexto - Para ver contexto de conversación")
     print("🧠 Características inteligentes:")
     print("   - Detección de intenciones (traducción, significado, saludos, etc.)")
+    print("   - Traducciones en tiempo real Español-Inglés")
     print("   - Respuestas contextuales mejoradas")
     print("   - Memoria de conversación")
     
