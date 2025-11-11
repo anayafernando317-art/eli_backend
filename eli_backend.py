@@ -18,158 +18,187 @@ translator = Translator()
 historial = []
 contexto_conversacion = {
     "ultimo_tema": "",
-    "preferencias_usuario": {},
-    "historial_reciente": []
+    "dificultades_detectadas": [],
+    "progreso_semanal": {}
 }
 
-print("✅ Eli AI - Backend inteligente cargado con traducciones")
+print("✅ Eli Coach - Tutor de pronunciación cargado")
 
-def traducir_texto(texto, destino='en'):
-    """Traduce texto usando Google Translate"""
-    try:
-        traduccion = translator.translate(texto, dest=destino)
-        return traduccion.text
-    except Exception as e:
-        print(f"❌ Error en traducción: {e}")
-        return None
+def analizar_dificultades(texto_transcrito, audio_duration):
+    """Analiza posibles dificultades del estudiante"""
+    dificultades = []
+    palabras = texto_transcrito.lower().split()
+    
+    # Análisis de longitud
+    if len(palabras) < 2:
+        dificultades.append("hablar_mas")
+    elif len(palabras) > 8:
+        dificultades.append("hablar_demasiado")
+    
+    # Análisis de duración
+    if audio_duration < 1.5:
+        dificultades.append("audio_corto")
+    elif audio_duration > 6.0:
+        dificultades.append("audio_largo")
+    
+    # Análisis de contenido (detección simple de errores comunes)
+    if any(word in texto_transcrito.lower() for word in ['umm', 'ahh', 'ehh']):
+        dificultades.append("muletillas")
+    
+    if texto_transcrito.strip() and len(texto_transcrito.split()) > 0:
+        # Verificar si la respuesta es muy genérica
+        respuestas_genericas = ['i dont know', "i don't know", 'no se', 'no sé', 'nothing', 'nada']
+        if any(resp in texto_transcrito.lower() for resp in respuestas_genericas):
+            dificultades.append("respuesta_generica")
+    
+    return dificultades
 
-def analizar_intencion(texto_usuario):
-    """Detecta qué tipo de respuesta necesita el usuario"""
-    texto = texto_usuario.lower().strip()
+def generar_retroalimentacion_util(texto_transcrito, audio_duration, dificultades):
+    """Genera retroalimentación útil para mejorar"""
     
-    # Detectar solicitud de traducción
-    palabras_traduccion = ['translate', 'traduce', 'traducción', 'traduccion', 'how do you say', 'what does mean', 'cómo se dice']
-    if any(palabra in texto for palabra in palabras_traduccion):
-        return "traduccion"
+    consejos = []
+    palabras = texto_transcrito.split()
+    total_palabras = len(palabras)
     
-    # Detectar solicitud de significado
-    palabras_significado = ['what does', 'what is', 'meaning', 'significado', 'qué significa']
-    if any(palabra in texto for palabra in palabras_significado):
-        return "significado"
+    # Consejos basados en dificultades detectadas
+    if "hablar_mas" in dificultades:
+        consejos.append("💡 **Try to speak a bit more**. Aim for 2-3 complete sentences.")
+        consejos.append("🎯 **Practice tip**: Think of your answer before speaking, then say it clearly.")
     
-    # Detectar saludos
-    palabras_saludo = ['hello', 'hi', 'hey', 'hola', 'good morning', 'good afternoon', 'good evening']
-    if any(palabra in texto for palabra in palabras_saludo):
-        return "saludo"
+    if "audio_corto" in dificultades:
+        consejos.append("⏱️ **Speak for 2-3 seconds** minimum. This gives me enough to analyze.")
     
-    # Detectar preguntas sobre ELI
-    palabras_sobre_eli = ['who are you', 'what are you', 'qué eres', 'cómo te llamas', 'what is your name']
-    if any(palabra in texto for palabra in palabras_sobre_eli):
-        return "sobre_eli"
+    if "muletillas" in dificultades:
+        consejos.append("🗣️ **Reduce filler words** like 'umm', 'ahh'. Pause briefly instead.")
+        consejos.append("🎯 **Practice**: Record yourself and notice when you use filler words.")
     
-    # Detectar despedidas
-    palabras_despedida = ['bye', 'goodbye', 'see you', 'adiós', 'chao', 'nos vemos']
-    if any(palabra in texto for palabra in palabras_despedida):
-        return "despedida"
+    if "respuesta_generica" in dificultades:
+        consejos.append("🤔 **Elaborate more** - instead of 'I don't know', try 'I'm not sure about that because...'")
+        consejos.append("💭 **Think about**: What would you say if a friend asked you this?")
     
-    # Detectar preguntas sobre ayuda
-    palabras_ayuda = ['help', 'ayuda', 'what can you do', 'qué puedes hacer']
-    if any(palabra in texto for palabra in palabras_ayuda):
-        return "ayuda"
+    # Consejos generales de pronunciación
+    if total_palabras >= 3:
+        if audio_duration / total_palabras < 0.4:
+            consejos.append("🐢 **Slow down a bit** - speaking clearly is more important than speed.")
+        elif audio_duration / total_palabras > 0.8:
+            consejos.append("🚀 **Good pacing**! You're speaking at a comfortable speed.")
     
-    # Detectar si el texto está en español
-    if any(palabra in texto for palabra in ['hola', 'cómo', 'qué', 'dónde', 'cuándo', 'por qué', 'gracias']):
-        return "espanol"
+    # Consejos positivos de refuerzo
+    if total_palabras >= 4 and "respuesta_generica" not in dificultades:
+        consejos.append("⭐ **Great job elaborating**! You're providing good details.")
     
-    # Por defecto, conversación normal
-    return "conversacion"
+    if not consejos:
+        consejos.append("🎉 **Excellent effort**! Keep practicing regularly.")
+        consejos.append("📚 **Tip**: Practice 10 minutes every day for best results.")
+    
+    return consejos[:3]  # Máximo 3 consejos
 
-def generar_respuesta_inteligente(texto_usuario, intencion):
-    """Genera respuesta basada en la intención detectada"""
+def proporcionar_ejemplo_respuesta(pregunta_actual):
+    """Proporciona ejemplos de cómo responder"""
     
-    if intencion == "traduccion":
-        # Extraer la palabra/frase a traducir
-        palabras = texto_usuario.lower().split()
-        palabras_clave = ['translate', 'traduce', 'traducción', 'traduccion', 'cómo se dice']
-        
-        for palabra_clave in palabras_clave:
-            if palabra_clave in palabras:
-                idx = palabras.index(palabra_clave)
-                if idx + 1 < len(palabras):
-                    palabra_a_traducir = ' '.join(palabras[idx+1:])
-                    
-                    # ✅ TRADUCCIÓN REAL
-                    traduccion = traducir_texto(palabra_a_traducir, 'en')
-                    if traduccion:
-                        return f"✅ Translation: '{palabra_a_traducir}' → '{traduccion}'\n\nNow let's practice pronouncing it! Repeat after me: '{traduccion}'"
-                    else:
-                        return f"I understand you want to translate: '{palabra_a_traducir}'. While I focus on pronunciation practice, you can use translation apps for accurate translations. Let's practice speaking instead! {generar_pregunta()}"
-        
-        return f"I'd be happy to help with translations! Please tell me what specific word or phrase you'd like to translate. {generar_pregunta()}"
-    
-    elif intencion == "significado":
-        palabras = texto_usuario.lower().split()
-        palabras_clave = ['what does', 'what is', 'meaning', 'significado', 'qué significa']
-        
-        for palabra_clave in palabras_clave:
-            if palabra_clave in palabras:
-                idx = palabras.index(palabra_clave)
-                if idx + 1 < len(palabras):
-                    palabra_significado = ' '.join(palabras[idx+1:])
-                    
-                    # Si la palabra parece estar en español, traducirla
-                    if any(car in 'áéíóúñ' for car in palabra_significado):
-                        traduccion = traducir_texto(palabra_significado, 'en')
-                        if traduccion:
-                            return f"📖 The word '{palabra_significado}' in Spanish means '{traduccion}' in English. Let's practice saying it: '{traduccion}'"
-                    
-                    return f"📖 You're asking about the meaning of '{palabra_significado}'. That's great for vocabulary! Try using this word in a sentence so we can practice pronunciation!"
-        
-        return f"That's a great question about meaning! While I specialize in pronunciation practice, understanding vocabulary is also important. Could you rephrase that as a speaking practice? {generar_pregunta()}"
-    
-    elif intencion == "saludo":
-        saludos = [
-            "Hello! I'm ELI, your English pronunciation assistant. Ready to practice speaking?",
-            "Hi there! Let's work on your English pronunciation today.",
-            "Greetings! I'm here to help you improve your English speaking skills.",
-            "Welcome back! Ready for some English practice?"
+    ejemplos = {
+        "what do you like to do on weekends?": [
+            "On weekends, I usually go to the park with my friends and sometimes we play soccer.",
+            "I enjoy watching movies and spending time with my family on weekends.",
+            "My weekend routine includes studying in the morning and relaxing in the afternoon."
+        ],
+        "do you have any pets?": [
+            "Yes, I have a dog named Max. He's very friendly and loves to play.",
+            "No, I don't have any pets right now, but I'd like to get a cat someday.",
+            "I have two cats and they're both very playful and cute."
+        ],
+        "what's your favorite food?": [
+            "My favorite food is pizza because you can put many different toppings on it.",
+            "I really enjoy eating tacos, especially with chicken and avocado.",
+            "I love pasta dishes, particularly spaghetti with tomato sauce."
+        ],
+        "where would you like to travel?": [
+            "I'd love to visit Japan to see the cherry blossoms and experience the culture.",
+            "My dream destination is Italy because I love history and Italian food.",
+            "I want to travel to Canada to see the beautiful mountains and lakes."
         ]
-        return f"{random.choice(saludos)} {generar_pregunta()}"
+    }
     
-    elif intencion == "sobre_eli":
-        respuestas = [
-            "I'm ELI (English Language Instructor), an AI assistant designed to help you practice English pronunciation through conversation and audio analysis.",
-            "I'm ELI, your personal English pronunciation coach! I listen to your speech and help you improve.",
-            "I'm ELI - I specialize in helping students like you improve English pronunciation through interactive practice."
-        ]
-        return f"{random.choice(respuestas)} Now, let's practice speaking! {generar_pregunta()}"
+    for key, examples in ejemplos.items():
+        if key in pregunta_actual.lower():
+            return random.choice(examples)
     
-    elif intencion == "despedida":
-        despedidas = [
-            "Goodbye! Great job practicing today. See you next time!",
-            "Bye! Keep practicing your English every day.",
-            "See you later! Don't forget to practice speaking regularly.",
-            "Take care! I enjoyed our pronunciation practice session."
-        ]
-        return random.choice(despedidas)
+    # Ejemplo genérico si no hay coincidencia específica
+    ejemplos_genericos = [
+        "That's an interesting question. I think that...",
+        "In my opinion, this is important because...",
+        "From my experience, I would say that...",
+        "I believe that... for several reasons. First...",
+        "Well, there are a few things to consider. For example..."
+    ]
+    return random.choice(ejemplos_genericos)
+
+def corregir_pronunciacion_palabras(texto_transcrito):
+    """Detecta palabras que podrían tener problemas de pronunciación"""
     
-    elif intencion == "ayuda":
-        ayuda = [
-            "I'm ELI, your English pronunciation assistant. I can help you: Analyze your pronunciation, Practice conversation, Improve your speaking skills. Just talk to me and I'll give you feedback!",
-            "I'm here to help you practice English pronunciation! You can: Speak to me in English, Get feedback on your pronunciation, Practice conversation. Try saying something in English!"
-        ]
-        return f"{random.choice(ayuda)} {generar_pregunta()}"
+    # Palabras comúnmente mal pronunciadas por hispanohablantes
+    palabras_dificiles = {
+        'the': 'th-e (pon la lengua entre los dientes)',
+        'think': 'th-ink (lengua entre dientes para el "th")',
+        'very': 've-ry (la "v" es con dientes en labio inferior)',
+        'beach': 'bea-ch (cuidado con no decir "bitch")',
+        'sheet': 'shee-t (cuidado con no decir "shit")',
+        'work': 'w-ork (la "r" es suave)',
+        'walk': 'w-alk (la "l" es suave)',
+        'world': 'w-or-ld (pronuncia las tres sílabas)'
+    }
     
-    elif intencion == "espanol":
-        # Si el usuario habla en español, traducir y animar a practicar en inglés
-        traduccion = traducir_texto(texto_usuario, 'en')
-        if traduccion:
-            return f"🌎 I see you're speaking Spanish. In English, that would be: '{traduccion}'\n\nGreat job practicing! Now try saying it in English: '{traduccion}'"
-        else:
-            return f"🌎 I notice you're speaking Spanish. That's great! Let's practice the same phrase in English. Try saying: '{generar_pregunta()}'"
+    palabras_usuario = texto_transcrito.lower().split()
+    correcciones = []
     
+    for palabra in palabras_usuario:
+        if palabra in palabras_dificiles:
+            correcciones.append(f"**{palabra}**: {palabras_dificiles[palabra]}")
+    
+    return correcciones
+
+def generar_respuesta_coach(texto_transcrito, audio_duration, pregunta_actual):
+    """Genera respuesta como un coach de pronunciación"""
+    
+    # Analizar dificultades
+    dificultades = analizar_dificultades(texto_transcrito, audio_duration)
+    retroalimentacion = generar_retroalimentacion_util(texto_transcrito, audio_duration, dificultades)
+    correcciones = corregir_pronunciacion_palabras(texto_transcrito)
+    
+    # Construir respuesta
+    respuesta = ""
+    
+    # Reconocimiento positivo
+    if texto_transcrito.strip():
+        respuesta += f"🎯 **Good attempt!** You said: \"{texto_transcrito}\"\n\n"
     else:
-        # Conversación normal - responder contextualmente
-        if texto_usuario:
-            respuestas_contextuales = [
-                f"Interesting! You said: '{texto_usuario}'. Let's continue practicing! {generar_pregunta()}",
-                f"Thanks for sharing that! You mentioned: '{texto_usuario}'. {generar_pregunta()}",
-                f"I understand you're saying: '{texto_usuario}'. Great practice! {generar_pregunta()}",
-                f"That's great conversation practice! You told me: '{texto_usuario}'. {generar_pregunta()}"
-            ]
-            return random.choice(respuestas_contextuales)
-        else:
-            return f"Thanks for practicing! {generar_pregunta()}"
+        respuesta += "🎤 **I couldn't hear you clearly.** Let's try again!\n\n"
+    
+    # Agregar retroalimentación específica
+    if retroalimentacion:
+        respuesta += "💡 **Tips to improve**:\n"
+        for tip in retroalimentacion:
+            respuesta += f"• {tip}\n"
+        respuesta += "\n"
+    
+    # Agregar correcciones de pronunciación si hay
+    if correcciones:
+        respuesta += "🗣️ **Pronunciation focus**:\n"
+        for correccion in correcciones:
+            respuesta += f"• {correccion}\n"
+        respuesta += "\n"
+    
+    # Ofrecer ejemplo si hay dificultades
+    if "respuesta_generica" in dificultades or not texto_transcrito.strip():
+        ejemplo = proporcionar_ejemplo_respuesta(pregunta_actual)
+        respuesta += f"📝 **Here's an example response**: \"{ejemplo}\"\n\n"
+        respuesta += "🔁 **Now you try**! Record yourself saying a similar response.\n\n"
+    else:
+        # Continuar con nueva pregunta
+        nueva_pregunta = generar_pregunta()
+        respuesta += f"🔜 **Next practice**: {nueva_pregunta}"
+    
+    return respuesta, dificultades, retroalimentacion
 
 def generar_pregunta():
     preguntas = [
@@ -196,18 +225,7 @@ def generar_pregunta():
     ]
     return random.choice(preguntas)
 
-def mantener_contexto(texto_usuario, respuesta_eli):
-    """Mantiene contexto de la conversación"""
-    global contexto_conversacion
-    
-    # Limitar historial a 10 interacciones
-    contexto_conversacion["historial_reciente"].append({
-        "usuario": texto_usuario,
-        "eli": respuesta_eli
-    })
-    
-    if len(contexto_conversacion["historial_reciente"]) > 10:
-        contexto_conversacion["historial_reciente"].pop(0)
+# ... (las funciones procesar_audio, transcribir_audio se mantienen igual)
 
 def procesar_audio(audio_file):
     """Convierte cualquier formato de audio a WAV compatible usando pydub"""
@@ -263,91 +281,31 @@ def transcribir_audio(wav_buffer):
     except sr.RequestError as e:
         raise Exception(f"Error con el servicio de reconocimiento: {e}")
 
-def evaluar_pronunciacion_simple(texto_transcrito, audio_duration):
-    """Evaluación simple de pronunciación"""
-    try:
-        # Métricas básicas
-        palabras = texto_transcrito.split()
-        total_palabras = len(palabras)
-        
-        # Score basado en longitud del texto
-        if total_palabras == 0:
-            longitud_score = 0
-        else:
-            longitud_score = min(total_palabras / 8.0, 1.0)
-        
-        # Score basado en duración del audio
-        duracion_score = min(audio_duration / 3.0, 1.0)  # 3 segundos = score 1.0
-        
-        # Score de pronunciación general
-        pronunciacion_score = (longitud_score + duracion_score) / 2.0
-        
-        # Generar retroalimentación
-        comentarios = []
-        
-        if total_palabras < 2:
-            comentarios.append("Try to speak a bit more. Say at least 2-3 words.")
-        elif total_palabras > 5:
-            comentarios.append("Great! You're speaking in complete sentences.")
-        
-        if audio_duration < 1.0:
-            comentarios.append("Your recording is very short. Try to speak for 2-3 seconds.")
-        elif audio_duration > 4.0:
-            comentarios.append("Good recording length!")
-            
-        if pronunciacion_score < 0.4:
-            comentarios.append("Keep practicing! Speak clearly and at a steady pace.")
-        elif pronunciacion_score < 0.7:
-            comentarios.append("Good effort! With practice you'll improve quickly.")
-        else:
-            comentarios.append("Excellent! Your pronunciation is getting better.")
-        
-        return {
-            "pronunciacion_score": round(pronunciacion_score, 2),
-            "fluidez_score": round(pronunciacion_score * 0.8, 2),
-            "longitud_score": round(longitud_score, 2),
-            "duracion_audio": round(audio_duration, 2),
-            "total_palabras": total_palabras,
-            "comentarios": comentarios[:2]
-        }
-        
-    except Exception as e:
-        print(f"Error en evaluación simple: {e}")
-        return {
-            "pronunciacion_score": 0.5,
-            "fluidez_score": 0.5,
-            "longitud_score": 0.5,
-            "duracion_audio": audio_duration,
-            "total_palabras": 0,
-            "comentarios": ["We're analyzing your speech. Keep practicing!"]
-        }
-
 @app.route("/conversar_audio", methods=["POST"])
 def conversar_audio():
-    """Endpoint principal para análisis de pronunciación"""
+    """Endpoint principal para práctica de pronunciación"""
     if 'audio' not in request.files:
         return jsonify({
             "estado": "error",
-            "retroalimentacion": "No se recibió archivo de audio",
             "respuesta": "Please send an audio file."
         }), 400
 
     audio_file = request.files['audio']
+    pregunta_actual = request.form.get('pregunta_actual', generar_pregunta())
     
     try:
         # Verificar tamaño del archivo
-        audio_file.seek(0, 2)  # Ir al final
+        audio_file.seek(0, 2)
         file_size = audio_file.tell()
-        audio_file.seek(0)  # Volver al inicio
+        audio_file.seek(0)
         
         if file_size < 1000:
             return jsonify({
                 "estado": "error",
-                "retroalimentacion": "Archivo de audio demasiado pequeño",
                 "respuesta": "The audio file is too short. Please record for at least 2-3 seconds."
             }), 400
 
-        # Procesar audio (conversión y obtener duración)
+        # Procesar audio
         print("🔄 Procesando audio...")
         wav_buffer, duracion_audio = procesar_audio(audio_file)
 
@@ -355,35 +313,29 @@ def conversar_audio():
         print("🎯 Transcribiendo audio...")
         texto_usuario = transcribir_audio(wav_buffer)
         
-        print(f"🗣️ Transcripción: {texto_usuario}")
+        print(f"🗣️ Estudiante dijo: {texto_usuario}")
 
-        if not texto_usuario:
-            return jsonify({
-                "estado": "error", 
-                "retroalimentacion": "No se pudo transcribir el audio",
-                "respuesta": "I couldn't hear any speech. Please try again and speak clearly."
-            }), 400
+        # ✅ NUEVO ENFOQUE: COACHING EN LUGAR DE EVALUACIÓN
+        print("👨‍🏫 Analizando como coach...")
+        respuesta, dificultades, consejos = generar_respuesta_coach(
+            texto_usuario, 
+            duracion_audio, 
+            pregunta_actual
+        )
 
-        # ✅ ANÁLISIS DE INTENCIÓN MEJORADO
-        print("🧠 Analizando intención del usuario...")
-        intencion = analizar_intencion(texto_usuario)
-        print(f"🎯 Intención detectada: {intencion}")
-        
-        respuesta = generar_respuesta_inteligente(texto_usuario, intencion)
-
-        # Evaluar pronunciación
-        print("📊 Evaluando pronunciación...")
-        evaluacion = evaluar_pronunciacion_simple(texto_usuario, duracion_audio)
-
-        # Mantener contexto de conversación
-        mantener_contexto(texto_usuario, respuesta)
+        # Actualizar contexto con dificultades detectadas
+        for dificultad in dificultades:
+            if dificultad not in contexto_conversacion["dificultades_detectadas"]:
+                contexto_conversacion["dificultades_detectadas"].append(dificultad)
 
         # Agregar al historial
         historial.append({
             "usuario": texto_usuario,
             "eli": respuesta,
-            "evaluacion": evaluacion,
-            "intencion": intencion
+            "duracion": duracion_audio,
+            "dificultades": dificultades,
+            "consejos": consejos,
+            "pregunta": pregunta_actual
         })
 
         # Limitar historial
@@ -393,11 +345,14 @@ def conversar_audio():
         return jsonify({
             "estado": "exito",
             "respuesta": respuesta,
-            "retroalimentacion": "Análisis de pronunciación completado",
             "transcripcion": texto_usuario,
-            "evaluacion": evaluacion,
-            "intencion": intencion,
-            "historial": historial[-5:]
+            "dificultades_detectadas": dificultades,
+            "consejos": consejos,
+            "nueva_pregunta": generar_pregunta() if "Next practice" in respuesta else pregunta_actual,
+            "progreso": {
+                "sesiones_hoy": len([h for h in historial if "pregunta" in h]),
+                "dificultades_comunes": contexto_conversacion["dificultades_detectadas"][-5:] if contexto_conversacion["dificultades_detectadas"] else []
+            }
         })
 
     except Exception as e:
@@ -405,39 +360,15 @@ def conversar_audio():
         traceback.print_exc()
         return jsonify({
             "estado": "error",
-            "retroalimentacion": f"Error procesando audio: {str(e)}",
-            "respuesta": "Sorry, there was a technical issue. Please try again."
+            "respuesta": f"Sorry, there was a technical issue. Please try again. Error: {str(e)}"
         }), 500
 
-@app.route("/conversar", methods=["POST"])
-def conversar():
-    """Endpoint alternativo para conversación por texto"""
-    data = request.get_json()
-    frase_usuario = data.get('frase_usuario', '').strip()
-    
-    if not frase_usuario:
-        return jsonify({
-            "estado": "error",
-            "respuesta": "Please provide some text."
-        }), 400
-    
-    # ✅ USAR EL SISTEMA DE INTELIGENCIA MEJORADO
-    intencion = analizar_intencion(frase_usuario)
-    respuesta = generar_respuesta_inteligente(frase_usuario, intencion)
-    mantener_contexto(frase_usuario, respuesta)
-    
-    historial.append({
-        "usuario": frase_usuario,
-        "eli": respuesta,
-        "evaluacion": None,
-        "intencion": intencion
-    })
-    
+@app.route("/obtener_pregunta", methods=["GET"])
+def obtener_pregunta():
+    """Endpoint para obtener una nueva pregunta"""
     return jsonify({
-        "estado": "exito",
-        "respuesta": respuesta,
-        "retroalimentacion": "Conversación procesada",
-        "intencion": intencion
+        "pregunta": generar_pregunta(),
+        "tipo": "conversacion"
     })
 
 @app.route("/health", methods=["GET"])
@@ -445,25 +376,27 @@ def health_check():
     """Endpoint para verificar estado del servidor"""
     return jsonify({
         "estado": "online",
-        "mensaje": "✅ Eli está vivo y escuchando 👂",
-        "servicio_transcripcion": "Google Web Speech API",
-        "caracteristicas": [
-            "Análisis de pronunciación",
-            "Detección de intenciones", 
-            "Traducciones en tiempo real",
-            "Respuestas contextuales",
-            "Evaluación de fluidez"
-        ],
-        "historial_conversaciones": len(historial)
+        "mensaje": "✅ Eli Coach activo - Enfoque en mejora, no en calificación",
+        "estadisticas": {
+            "sesiones_totales": len(historial),
+            "dificultades_comunes": contexto_conversacion["dificultades_detectadas"][-5:] if contexto_conversacion["dificultades_detectadas"] else [],
+            "estudiantes_activos": "preparatoria"
+        }
     }), 200
 
-@app.route("/contexto", methods=["GET"])
-def obtener_contexto():
-    """Endpoint para ver el contexto actual (útil para debugging)"""
+@app.route("/progreso", methods=["GET"])
+def obtener_progreso():
+    """Endpoint para ver el progreso del estudiante"""
     return jsonify({
-        "contexto_actual": contexto_conversacion,
-        "ultimas_interacciones": historial[-3:] if historial else []
-    }), 200
+        "sesiones_totales": len(historial),
+        "dificultades_detectadas": contexto_conversacion["dificultades_detectadas"],
+        "ultimas_practicas": historial[-5:] if historial else [],
+        "recomendaciones": [
+            "Practice 10 minutes daily",
+            "Focus on one difficulty at a time", 
+            "Record yourself and compare"
+        ]
+    })
 
 @app.route("/")
 def index():
@@ -471,7 +404,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Eli Backend</title>
+        <title>Eli Coach</title>
         <style>
             body { 
                 font-family: Arial, sans-serif; 
@@ -496,43 +429,35 @@ def index():
                 margin: 15px 0;
                 font-size: 18px;
             }
-            a {
+            .coach {
                 color: #4FC3F7;
-                text-decoration: none;
-                font-weight: bold;
-            }
-            a:hover {
-                text-decoration: underline;
+                font-size: 24px;
+                margin: 20px 0;
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <div class="success">🚀 Eli Backend funcionando</div>
-            <div class="info">✅ Con traducciones en tiempo real</div>
-            <div class="info">🎯 Endpoint principal: <strong>/conversar_audio</strong></div>
-            <div class="info">🔍 Health: <a href="/health">/health</a></div>
-            <div class="info">💬 Texto: <a href="/conversar">/conversar</a></div>
-            <div class="info">🧠 Contexto: <a href="/contexto">/contexto</a></div>
-            <div class="info">🌎 Ahora con soporte para traducciones Español-Inglés</div>
+            <div class="success">👨‍🏫 Eli Coach</div>
+            <div class="coach">Tutor de Pronunciación en Inglés</div>
+            <div class="info">✅ Enfoque en MEJORA continua</div>
+            <div class="info">🎯 Ayuda cuando no sabes responder</div>
+            <div class="info">💡 Consejos prácticos personalizados</div>
+            <div class="info">🚀 Para estudiantes de preparatoria</div>
+            <div class="info">🔗 Usa /conversar_audio para practicar</div>
         </div>
     </body>
     </html>
     """
 
 if __name__ == "__main__":
-    print("✅ Eli backend inteligente cargado correctamente")
-    print("🎯 Endpoints disponibles:")
-    print("   POST /conversar_audio - Para análisis de pronunciación por audio")
-    print("   POST /conversar - Para conversación por texto") 
-    print("   GET  /health - Para verificar estado del servidor")
-    print("   GET  /contexto - Para ver contexto de conversación")
-    print("🧠 Características inteligentes:")
-    print("   - Detección de intenciones (traducción, significado, saludos, etc.)")
-    print("   - Traducciones en tiempo real Español-Inglés")
-    print("   - Respuestas contextuales mejoradas")
-    print("   - Memoria de conversación")
+    print("👨‍🏫 Eli Coach - Tutor de pronunciación cargado")
+    print("🎯 Enfoque: Ayudar a mejorar, no calificar")
+    print("🚀 Endpoints:")
+    print("   POST /conversar_audio - Práctica principal con coaching")
+    print("   GET  /obtener_pregunta - Obtener nueva pregunta")
+    print("   GET  /progreso - Ver progreso del estudiante")
+    print("   GET  /health - Estado del servidor")
     
-    # Configuración para Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
