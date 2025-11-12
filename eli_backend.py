@@ -8,6 +8,7 @@ from pydub import AudioSegment
 import io
 import tempfile
 from googletrans import Translator
+import re  # ✅ NUEVO: Para expresiones regulares
 
 app = Flask(__name__)
 CORS(app)
@@ -17,32 +18,58 @@ historial = []
 
 print("✅ Eli - Tutor Conversacional de Pronunciación cargado")
 
-# === SISTEMA CONVERSACIONAL ===
+# === SISTEMA CONVERSACIONAL MEJORADO ===
 def es_solicitud_traduccion(texto):
-    texto_lower = texto.lower()
-    palabras_clave = [
-        'translate', 'traduce', 'traducción', 'traduccion', 
-        'how do you say', 'cómo se dice', 'what is in english',
-        'en inglés', 'in english'
+    """Detección MÁS PRECISA de solicitudes de traducción"""
+    texto_lower = texto.lower().strip()
+    
+    patrones_traduccion = [
+        r'.*how do you say.*',
+        r'.*cómo se dice.*', 
+        r'.*traduce.*',
+        r'.*translate.*',
+        r'.*what is.*in english.*',
+        r'.*qué es.*en inglés.*',
+        r'.*como se dice.*',  # Sin acento
+        r'.*how to say.*'
     ]
-    return any(palabra in texto_lower for palabra in palabras_clave)
+    
+    return any(re.search(patron, texto_lower) for patron in patrones_traduccion)
 
 def extraer_palabra_traducir(texto):
-    texto_lower = texto.lower()
+    """Extracción MEJORADA de la palabra a traducir"""
+    texto_lower = texto.lower().strip()
+    
+    # ✅ PATRONES MÁS ESPECÍFICOS CON EXPRESIONES REGULARES
     patrones = [
-        'how do you say',
-        'cómo se dice', 
-        'what is',
-        'traduce',
-        'translate'
+        r'how do you say (.+?) (?:in english|please|por favor|\?|$)',
+        r'cómo se dice (.+?) (?:en inglés|por favor|\?|$)',
+        r'traduce (.+?) (?:a inglés|por favor|\?|$)',
+        r'translate (.+?) (?:to english|please|\?|$)',
+        r'what is (.+?) in english',
+        r'qué es (.+?) en inglés'
     ]
     
     for patron in patrones:
-        if patron in texto_lower:
-            inicio = texto_lower.find(patron) + len(patron)
-            palabra = texto[inicio:].strip()
-            palabra = palabra.rstrip('?').rstrip('.').rstrip('"').rstrip("'").strip()
+        match = re.search(patron, texto_lower)
+        if match:
+            palabra = match.group(1).strip()
+            # Limpiar la palabra
+            palabra = re.sub(r'[?.,!¿¡]', '', palabra)  # Remover puntuación
             return palabra
+    
+    # ✅ MÉTODO DE RESPUESTA: Buscar después de palabras clave
+    palabras_clave = ['say', 'dice', 'traduce', 'translate', 'what is', 'qué es']
+    palabras = texto_lower.split()
+    
+    for i, palabra in enumerate(palabras):
+        if palabra in palabras_clave and i + 1 < len(palabras):
+            # Tomar la siguiente palabra como candidata
+            candidata = palabras[i + 1]
+            # Limpiar y devolver
+            candidata = re.sub(r'[?.,!¿¡]', '', candidata)
+            return candidata
+    
     return None
 
 def es_saludo(texto):
@@ -92,21 +119,43 @@ def generar_respuesta_conversacional(texto_usuario):
         ]
         return random.choice(estados), []
     
-    # Traducciones
+    # ✅ TRADUCCIONES MEJORADAS
     if es_solicitud_traduccion(texto_usuario):
         palabra = extraer_palabra_traducir(texto_usuario)
-        if palabra:
+        print(f"🔍 Palabra a traducir detectada: '{palabra}'")  # Debug
+        
+        if palabra and len(palabra) > 1:  # Asegurar que no sea una letra sola
             try:
-                traduccion = translator.translate(palabra, dest='en')
-                if traduccion.text.lower() != palabra.lower():
-                    consejos = [f"Practice saying: '{traduccion.text}'", "Focus on the pronunciation of this new word"]
-                    return f"✅ Translation: '{palabra}' → '{traduccion.text}'\n\nNow let's practice pronouncing it! Repeat after me: '{traduccion.text}'", consejos
+                # ✅ DETECCIÓN MEJORADA DEL IDIOMA ORIGINAL
+                deteccion_idioma = translator.detect(palabra)
+                idioma_original = deteccion_idioma.lang
+                confianza = deteccion_idioma.confidence
+                
+                print(f"🌐 Idioma detectado: {idioma_original} (confianza: {confianza})")
+                
+                # Solo traducir si parece español o tiene baja confianza de ser inglés
+                if idioma_original == 'es' or confianza < 0.8:
+                    traduccion = translator.translate(palabra, src='es', dest='en')
+                    texto_traducido = traduccion.text
+                    
+                    # Verificar que la traducción sea diferente
+                    if texto_traducido.lower() != palabra.lower():
+                        consejos = [
+                            f"Practice saying: '{texto_traducido}'", 
+                            f"Repeat the word 3 times: '{texto_traducido}'",
+                            "Focus on the pronunciation of this new word"
+                        ]
+                        return f"✅ **Translation**: '{palabra}' → '{texto_traducido}'\n\n🎯 **Now let's practice pronouncing it!** Repeat after me: '{texto_traducido}'", consejos
+                    else:
+                        return f"🤔 It seems '{palabra}' doesn't need translation. Let's practice pronouncing it clearly!", [f"Practice saying '{palabra}' with clear pronunciation"]
                 else:
-                    return f"🤔 It seems '{palabra}' is already in English. Let's practice pronouncing it clearly!", [f"Practice saying '{palabra}' with clear pronunciation"]
-            except:
-                return "I'd be happy to help with translations! Let's focus on pronunciation practice.", []
+                    return f"🔍 I detected that '{palabra}' might already be in English. Let's practice its pronunciation!", [f"Focus on pronouncing '{palabra}' clearly"]
+                    
+            except Exception as e:
+                print(f"❌ Error en traducción: {e}")
+                return f"🔄 Let's practice the pronunciation of '{palabra}'! Say it clearly.", [f"Practice saying '{palabra}'"]
         else:
-            return "I'd be happy to help with translations! Please tell me what specific word you'd like to translate.", []
+            return "I'd be happy to help with translations! Please tell me what specific word you'd like to translate. For example: 'How do you say casa in English?'", []
     
     # Respuesta conversacional normal con enfoque en pronunciación
     respuestas = [
@@ -159,11 +208,10 @@ def analizar_pronunciacion(texto_transcrito, duracion_audio):
             "Record yourself and compare with native speakers"
         ])
     
-    return consejos[:3]  # Máximo 3 consejos
+    return consejos[:3]
 
 def necesita_correccion_pronunciacion(texto_usuario):
     """Determina si la respuesta merece corrección de pronunciación"""
-    # No corregir saludos, despedidas o preguntas muy cortas
     if es_saludo(texto_usuario) or es_despedida(texto_usuario):
         return False
     
@@ -173,7 +221,7 @@ def necesita_correccion_pronunciacion(texto_usuario):
         
     return True
 
-# === FUNCIONES DE AUDIO ===
+# === FUNCIONES DE AUDIO (MISMAS) ===
 def procesar_audio(audio_file):
     try:
         audio_bytes = audio_file.read()
@@ -223,21 +271,11 @@ def generar_pregunta():
         "Tell me about your family.",
         "What's your favorite season and why?",
         "Do you enjoy sports? Which ones?",
-        "What was the last movie you watched?",
-        "What's your favorite hobby?",
-        "Do you prefer coffee or tea?",
-        "What's the best book you've read recently?",
-        "What do you do to relax?",
-        "Do you like cooking? What's your specialty?",
-        "What's your dream job?",
-        "Do you prefer the city or the countryside?",
-        "What's your favorite type of weather?",
-        "Do you have any siblings?",
-        "What's something you're learning right now?"
+        "What was the last movie you watched?"
     ]
     return random.choice(preguntas)
 
-# === ENDPOINT PRINCIPAL MEJORADO ===
+# === ENDPOINT PRINCIPAL ===
 @app.route("/conversar_audio", methods=["POST"])
 def conversar_audio():
     if 'audio' not in request.files:
@@ -247,14 +285,10 @@ def conversar_audio():
     pregunta_actual = request.form.get('pregunta_actual', generar_pregunta())
     
     try:
-        # Procesar audio
         wav_buffer, duracion_audio = procesar_audio(audio_file)
-
-        # Transcribir audio
         texto_usuario = transcribir_audio(wav_buffer)
         
         print(f"🗣️ Usuario dijo: {texto_usuario}")
-        print(f"⏱️ Duración: {duracion_audio} segundos")
 
         if not texto_usuario:
             return jsonify({
@@ -262,20 +296,17 @@ def conversar_audio():
                 "respuesta": "I couldn't hear any speech. Please try again and speak clearly."
             }), 400
 
-        # ✅ SISTEMA HÍBRIDO: Conversación + Pronunciación
+        # ✅ SISTEMA HÍBRIDO MEJORADO
         respuesta, consejos_conversacion = generar_respuesta_conversacional(texto_usuario)
         
-        # ✅ AGREGAR ANÁLISIS DE PRONUNCIACIÓN SI APLICA
         todos_consejos = consejos_conversacion
         if necesita_correccion_pronunciacion(texto_usuario):
             consejos_pronunciacion = analizar_pronunciacion(texto_usuario, duracion_audio)
             todos_consejos.extend(consejos_pronunciacion)
 
-        # Determinar si cambiar la pregunta
         cambiar_pregunta = not es_saludo(texto_usuario) and not es_despedida(texto_usuario)
         nueva_pregunta = generar_pregunta() if cambiar_pregunta else pregunta_actual
 
-        # Agregar al historial
         historial.append({
             "usuario": texto_usuario,
             "eli": respuesta,
@@ -293,13 +324,11 @@ def conversar_audio():
             "transcripcion": texto_usuario,
             "nueva_pregunta": nueva_pregunta,
             "dificultades_detectadas": [],
-            "consejos": todos_consejos,
-            "tipo_analisis": "pronunciacion_y_conversacion"
+            "consejos": todos_consejos
         })
 
     except Exception as e:
         print(f"❌ Error: {e}")
-        traceback.print_exc()
         return jsonify({
             "estado": "error",
             "respuesta": f"Error processing audio: {str(e)}"
@@ -313,22 +342,10 @@ def obtener_pregunta():
 def health_check():
     return jsonify({
         "estado": "online",
-        "mensaje": "✅ Eli - Tutor Conversacional de Pronunciación",
-        "funcionalidades": [
-            "Conversaciones naturales en inglés",
-            "Análisis de pronunciación en tiempo real", 
-            "Traducciones integradas",
-            "Consejos personalizados de pronunciación",
-            "Práctica de speaking conversacional"
-        ]
+        "mensaje": "✅ Eli - Tutor con Traducciones Mejoradas"
     })
 
-@app.route("/")
-def home():
-    return "🎯 Eli Tutor - Conversación + Pronunciación | Usa /conversar_audio para practicar"
-
 if __name__ == "__main__":
-    print("🎯 Eli - Modo Tutor Conversacional activado")
-    print("💡 Funcionalidades: Conversación + Pronunciación + Traducciones")
+    print("🎯 Eli - Traducciones Mejoradas Activadas")
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
