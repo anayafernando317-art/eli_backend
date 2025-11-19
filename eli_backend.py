@@ -8,7 +8,7 @@ from pydub import AudioSegment
 import io
 import tempfile
 from googletrans import Translator
-import re  # ✅ NUEVO: Para expresiones regulares
+import re  # ✅ Para expresiones regulares
 
 app = Flask(__name__)
 CORS(app)
@@ -17,6 +17,145 @@ translator = Translator()
 historial = []
 
 print("✅ Eli - Tutor Conversacional de Pronunciación cargado")
+
+# === VOCABULARIO PARA EL JUEGO ===
+vocabulario = {
+    "fácil": [
+        "casa", "perro", "gato", "sol", "agua", "comida", "amigo", 
+        "familia", "tiempo", "música", "libro", "escuela", "maestro",
+        "estudiante", "ciudad", "país", "número", "color", "día", "noche",
+        "mesa", "silla", "ventana", "puerta", "coche", "flor", "árbol",
+        "playa", "mar", "cielo", "luna", "estrella", "montaña", "río",
+        "pan", "leche", "fruta", "verdura", "carne", "pescado", "huevo",
+        "cuchara", "tenedor", "cuchillo", "plato", "vaso", "cama", "sofá",
+        "zapato", "ropa", "camisa", "pantalón", "vestido", "calcetín"
+    ],
+    "normal": [
+        "El gato está en la mesa",
+        "Me gusta la música",
+        "Tengo un perro grande",
+        "Hoy hace mucho sol",
+        "Vamos a la escuela",
+        "Mi familia es muy importante",
+        "El libro es interesante",
+        "Necesito beber agua",
+        "Mi amigo viene hoy",
+        "Qué tiempo hace hoy?",
+        "Me encanta comer pizza",
+        "Los niños juegan en el parque",
+        "Estudio inglés todos los días",
+        "La película fue muy divertida",
+        "Quiero viajar a otro país",
+        "Mi color favorito es el azul",
+        "La comida está deliciosa",
+        "Trabajo en una oficina",
+        "Leo un libro antes de dormir",
+        "La casa es grande y bonita",
+        "El coche necesita gasolina",
+        "Mañana es mi cumpleaños",
+        "Los estudiantes aprenden rápido",
+        "El restaurante está lleno",
+        "Necesito comprar comida"
+    ],
+    "difícil": [
+        "I would have gone to the university if I had known about the scholarship opportunities",
+        "The scientific research demonstrated significant improvements in renewable energy efficiency",
+        "Global economic trends indicate substantial growth in emerging markets this quarter",
+        "Environmental sustainability requires collaborative efforts from multiple stakeholders",
+        "Technological advancements continue to revolutionize modern communication systems",
+        "The interdisciplinary approach to problem-solving yields innovative solutions across various sectors",
+        "Comprehensive analysis of macroeconomic indicators reveals potential shifts in fiscal policy",
+        "Cognitive behavioral therapy has proven effective in treating anxiety disorders",
+        "Renewable energy sources are becoming increasingly cost-competitive with traditional fossil fuels",
+        "Artificial intelligence algorithms can process vast amounts of data in real-time",
+        "Climate change mitigation strategies require international cooperation and commitment",
+        "The pharmaceutical company developed a groundbreaking treatment for rare diseases",
+        "Sustainable urban planning incorporates green spaces and efficient public transportation",
+        "Quantum computing represents the next frontier in computational technology",
+        "Biomedical engineering combines principles of medicine and engineering"
+    ]
+}
+
+# === ENDPOINTS DEL JUEGO ===
+@app.route("/juego/palabra", methods=["GET"])
+def obtener_palabra_juego():
+    try:
+        dificultad = request.args.get('dificultad', 'fácil')
+        
+        if dificultad not in vocabulario:
+            return jsonify({"error": "Dificultad no válida"}), 400
+        
+        palabra = random.choice(vocabulario[dificultad])
+        
+        return jsonify({
+            "palabra": palabra,
+            "dificultad": dificultad,
+            "puntos_base": {
+                "fácil": 10,
+                "normal": 25, 
+                "difícil": 50
+            }[dificultad]
+        })
+    except Exception as e:
+        print(f"❌ Error en /juego/palabra: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/juego/validar", methods=["POST"])
+def validar_respuesta_juego():
+    try:
+        data = request.json
+        palabra_original = data.get('palabra_original', '')
+        respuesta_usuario = data.get('respuesta_usuario', '')
+        dificultad = data.get('dificultad', 'fácil')
+        
+        print(f"🎯 Validando: '{palabra_original}' -> '{respuesta_usuario}' (Dificultad: {dificultad})")
+
+        # Traducir la palabra original al inglés para comparar
+        if any(c.isalpha() for c in palabra_original) and not palabra_original.strip().isascii():
+            # Si contiene caracteres no ASCII, asumimos que es español y traducimos
+            traduccion = translator.translate(palabra_original, src='es', dest='en')
+            traduccion_correcta = traduccion.text
+        else:
+            # Si ya está en inglés, usamos la palabra original
+            traduccion_correcta = palabra_original
+        
+        # Limpiar ambas respuestas para comparación
+        respuesta_limpia = respuesta_usuario.lower().strip()
+        correcta_limpia = traduccion_correcta.lower().strip()
+        
+        # Comparación más flexible para el juego
+        es_correcta = (
+            respuesta_limpia == correcta_limpia or
+            respuesta_limpia in correcta_limpia or
+            correcta_limpia in respuesta_limpia or
+            respuesta_limpia.replace("the ", "") == correcta_limpia.replace("the ", "") or
+            respuesta_limpia.replace("a ", "") == correcta_limpia.replace("a ", "")
+        )
+        
+        # Puntos basados en la dificultad
+        puntos_obtenidos = {
+            "fácil": 10,
+            "normal": 25,
+            "difícil": 50
+        }[dificultad] if es_correcta else 0
+
+        print(f"✅ Validación: {es_correcta} - Puntos: {puntos_obtenidos}")
+        
+        return jsonify({
+            "es_correcta": es_correcta,
+            "respuesta_usuario": respuesta_usuario,
+            "traduccion_correcta": traduccion_correcta,
+            "palabra_original": palabra_original,
+            "puntos_obtenidos": puntos_obtenidos
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en validación del juego: {e}")
+        return jsonify({
+            "error": f"Error en validación: {str(e)}",
+            "es_correcta": False,
+            "puntos_obtenidos": 0
+        }), 500
 
 # === SISTEMA CONVERSACIONAL MEJORADO ===
 def es_solicitud_traduccion(texto):
@@ -221,7 +360,7 @@ def necesita_correccion_pronunciacion(texto_usuario):
         
     return True
 
-# === FUNCIONES DE AUDIO (MISMAS) ===
+# === FUNCIONES DE AUDIO ===
 def procesar_audio(audio_file):
     try:
         audio_bytes = audio_file.read()
@@ -275,7 +414,7 @@ def generar_pregunta():
     ]
     return random.choice(preguntas)
 
-# === ENDPOINT PRINCIPAL ===
+# === ENDPOINTS PRINCIPALES ===
 @app.route("/conversar_audio", methods=["POST"])
 def conversar_audio():
     if 'audio' not in request.files:
@@ -342,10 +481,25 @@ def obtener_pregunta():
 def health_check():
     return jsonify({
         "estado": "online",
-        "mensaje": "✅ Eli - Tutor con Traducciones Mejoradas"
+        "mensaje": "✅ Eli - Tutor con Traducciones Mejoradas y Juego de Vocabulario"
+    })
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "mensaje": "🚀 Eli Backend funcionando correctamente",
+        "version": "2.0.0",
+        "caracteristicas": [
+            "Tutor conversacional de pronunciación",
+            "Sistema de traducciones mejorado", 
+            "Juego de vocabulario integrado",
+            "Análisis de pronunciación en tiempo real"
+        ]
     })
 
 if __name__ == "__main__":
-    print("🎯 Eli - Traducciones Mejoradas Activadas")
+    print("🎯 Eli - Sistema Completo Activado")
+    print("📚 Juego de Vocabulario Integrado")
+    print("🔊 Sistema de Pronunciación Mejorado")
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
