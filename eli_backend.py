@@ -18,138 +18,183 @@ historial = []
 
 print("✅ Eli - Tutor Conversacional de Pronunciación cargado")
 
-# === SISTEMA COACH MEJORADO ===
+# === SISTEMA COACH CONVERSACIONAL MEJORADO ===
 class SistemaCoach:
     def __init__(self):
-        self.historial_conversacion = []
-        self.estadisticas = {
-            'total_palabras': 0,
-            'sesiones_hoy': 0,
-            'dificultades_detectadas': set(),
-            'progreso_fluidez': 0
-        }
+        self.estado_conversacion = "inicio"
+        self.ultimo_tema = ""
+        self.historial = []
     
-    def analizar_calidad_respuesta(self, texto, duracion_audio):
-        """Análisis profundo de la respuesta del estudiante"""
+    def analizar_pronunciacion_detallada(self, texto, audio_duration):
+        """Análisis detallado de pronunciación con correcciones específicas"""
         analisis = {
-            'puntuacion_fluidez': 0,
+            'puntuacion': 0,
+            'correcciones': [],
             'consejos': [],
-            'elogios': [],
-            'areas_mejora': []
+            'palabras_problematicas': [],
+            'retroalimentacion_positiva': []
         }
         
-        palabras = texto.split()
-        total_palabras = len(palabras)
-        
-        # Análisis de longitud
-        if total_palabras < 3:
-            analisis['areas_mejora'].append("Try to use longer sentences (3+ words)")
-            analisis['puntuacion_fluidez'] -= 1
-        elif total_palabras > 8:
-            analisis['elogios'].append("Great! You're using complex sentences")
-            analisis['puntuacion_fluidez'] += 2
-        else:
-            analisis['puntuacion_fluidez'] += 1
-        
-        # Análisis de duración
-        if duracion_audio < 2.0:
-            analisis['areas_mejora'].append("Speak for at least 2-3 seconds to practice rhythm")
-        elif duracion_audio > 4.0:
-            analisis['elogios'].append("Excellent speaking duration!")
-            analisis['puntuacion_fluidez'] += 1
-        
-        # Análisis de estructura
-        if any(p in texto.lower() for p in ['and', 'but', 'because', 'so']):
-            analisis['elogios'].append("Good use of connecting words!")
-            analisis['puntuacion_fluidez'] += 1
-        
-        # Consejos específicos de pronunciación
-        consejos_pronunciacion = self._generar_consejos_pronunciacion(texto)
-        analisis['consejos'].extend(consejos_pronunciacion)
-        
-        return analisis
-    
-    def _generar_consejos_pronunciacion(self, texto):
-        """Genera consejos específicos basados en palabras comunes"""
-        consejos = []
         palabras = texto.lower().split()
         
-        # Palabras comúnmente problemáticas con consejos específicos
-        dificultades = {
-            'the': 'Practice the "th" sound: place tongue between teeth',
-            'very': 'For "v", gently bite your lower lip with upper teeth',
-            'think': 'Focus on the soft "th" at the beginning',
-            'world': 'Pronounce all three syllables: wor-l-d',
-            'water': 'Make the "t" sound clear and crisp',
-            'right': 'Roll your "r" slightly at the beginning',
-            'this': 'Voiced "th" - vibrate your vocal cords',
-            'that': 'Same as "this" - voiced "th" sound',
-            'thanks': 'Unvoiced "th" - no vibration',
-            'she': 'For "sh", round your lips and push air out',
-            'usually': 'Focus on the "zh" sound in the middle',
-            'picture': 'Pronounce both "c" and "t" sounds clearly'
+        # Diccionario de palabras comúnmente mal pronunciadas con correcciones
+        problemas_pronunciacion = {
+            'the': {'sonido_correcto': 'ðə', 'explicacion': 'Coloca la lengua entre los dientes para el sonido "th"'},
+            'think': {'sonido_correcto': 'θɪŋk', 'explicacion': 'Sonido "th" suave, sin vibrar cuerdas vocales'},
+            'this': {'sonido_correcto': 'ðɪs', 'explicacion': 'Sonido "th" vibrante, con vibración en garganta'},
+            'very': {'sonido_correcto': 'vɛri', 'explicacion': 'Muerde suavemente el labio inferior con dientes superiores para la "v"'},
+            'water': {'sonido_correcto': 'wɔːtər', 'explicacion': 'Pronuncia claramente la "t" en el medio'},
+            'world': {'sonido_correcto': 'wɜːrld', 'explicacion': 'Tres sílabas: wor-l-d'},
+            'right': {'sonido_correcto': 'raɪt', 'explicacion': 'Sonido "r" fuerte al inicio'},
+            'light': {'sonido_correcto': 'laɪt', 'explicacion': 'Sonido "l" claro, lengua en paladar'},
+            'thanks': {'sonido_correcto': 'θæŋks', 'explicacion': 'Sonido "th" al inicio, luego "anks"'},
+            'she': {'sonido_correcto': 'ʃi', 'explicacion': 'Sonido "sh" redondeando los labios'},
+            'usually': {'sonido_correcto': 'juːʒuəli', 'explicacion': 'Sonido "zh" en el medio como en "vision"'},
         }
         
+        # Detectar palabras problemáticas
         for palabra in palabras:
-            if palabra in dificultades:
-                consejos.append(f"💡 For '{palabra}': {dificultades[palabra]}")
+            palabra_limpia = palabra.strip('.,!?')
+            if palabra_limpia in problemas_pronunciacion:
+                correccion = problemas_pronunciacion[palabra_limpia]
+                analisis['palabras_problematicas'].append({
+                    'palabra': palabra_limpia,
+                    'sonido_correcto': correccion['sonido_correcto'],
+                    'explicacion': correccion['explicacion']
+                })
         
-        # Consejos generales si no hay específicos
-        if not consejos:
-            consejos.extend([
-                "🎯 Try to speak at a steady pace - not too fast or slow",
-                "🔊 Practice difficult sounds like 'th', 'r', and 'v' daily",
-                "👂 Record yourself and compare with native speakers"
-            ])
+        # Análisis de fluidez
+        if len(palabras) < 3:
+            analisis['consejos'].append("💡 Intenta formar oraciones más largas (mínimo 3 palabras)")
+        elif len(palabras) > 8:
+            analisis['retroalimentacion_positiva'].append("¡Excelente! Estás usando oraciones complejas")
         
-        return consejos[:3]
-    
-    def generar_respuesta_motivacional(self, analisis, texto_usuario):
-        """Genera respuestas motivacionales y de coaching"""
+        if audio_duration < 1.5:
+            analisis['consejos'].append("⏱️ Habla por al menos 2 segundos para practicar ritmo")
+        elif audio_duration > 4.0:
+            analisis['retroalimentacion_positiva'].append("🎤 Buena duración de habla")
         
-        # Elogios basados en el análisis
-        if analisis['elogios']:
-            elogio = random.choice(analisis['elogios'])
-        else:
-            elogios_generales = [
-                "Good effort! Keep practicing!",
-                "You're making progress!",
-                "I can see your improvement!",
-                "Great attempt! Every practice counts!"
+        return analisis
+
+    def generar_respuesta_conversacional(self, texto_usuario, duracion_audio=0):
+        """Genera respuestas naturales y mantiene la conversación"""
+        texto_lower = texto_usuario.lower().strip()
+        
+        # 1. DETECCIÓN DE SALUDOS
+        saludos = ['hello', 'hi', 'hey', 'hola', 'good morning', 'good afternoon', 'good evening']
+        if any(saludo in texto_lower for saludo in saludos):
+            self.estado_conversacion = "conversando"
+            respuestas_saludo = [
+                "Hello! It's great to hear from you! How are you doing today?",
+                "Hi there! I'm excited to practice English with you. How's your day going?",
+                "Hey! Wonderful to talk with you. What would you like to practice today?",
+                "Hello! I'm here to help you improve your English. How are you feeling about your practice?"
             ]
-            elogio = random.choice(elogios_generales)
+            return {
+                "respuesta": random.choice(respuestas_saludo),
+                "tipo": "saludo",
+                "correcciones": [],
+                "pregunta_seguimiento": True
+            }
         
-        # Construir respuesta completa
-        respuesta = f"{elogio}\n\n"
+        # 2. DETECCIÓN DE ESTADO/EMOCIONES
+        if any(p in texto_lower for p in ['how are you', 'cómo estás', 'qué tal']):
+            respuestas_estado = [
+                "I'm doing wonderful! Ready to help you practice English. Thank you for asking!",
+                "I'm great! So excited to be your English practice partner today.",
+                "I'm doing well! Always happy when we get to practice together."
+            ]
+            return {
+                "respuesta": f"{random.choice(respuestas_estado)} How about you? How are you feeling?",
+                "tipo": "estado",
+                "correcciones": [],
+                "pregunta_seguimiento": True
+            }
         
-        if analisis['areas_mejora']:
-            respuesta += "📈 **Areas to improve:**\n"
-            for area in analisis['areas_mejora'][:2]:
-                respuesta += f"• {area}\n"
-            respuesta += "\n"
+        # 3. DETECCIÓN DE DESPEDIDAS
+        despedidas = ['bye', 'goodbye', 'see you', 'adiós', 'chao', 'nos vemos']
+        if any(despedida in texto_lower for despedida in despedidas):
+            self.estado_conversacion = "despedida"
+            respuestas_despedida = [
+                "Goodbye! It was wonderful practicing with you. See you next time! 🎉",
+                "Bye! Keep practicing every day - you're making great progress! 👋",
+                "See you later! Don't forget to practice your pronunciation daily. 📚"
+            ]
+            return {
+                "respuesta": random.choice(respuestas_despedida),
+                "tipo": "despedida",
+                "correcciones": [],
+                "pregunta_seguimiento": False
+            }
         
+        # 4. ANÁLISIS DE PRONUNCIACIÓN PARA RESPUESTAS NORMALES
+        analisis = self.analizar_pronunciacion_detallada(texto_usuario, duracion_audio)
+        
+        # Construir respuesta conversacional
+        respuesta = self._construir_respuesta_con_retroalimentacion(analisis, texto_usuario)
+        
+        return {
+            "respuesta": respuesta,
+            "tipo": "conversacion",
+            "correcciones": analisis['palabras_problematicas'],
+            "consejos": analisis['consejos'],
+            "pregunta_seguimiento": True
+        }
+    
+    def _construir_respuesta_con_retroalimentacion(self, analisis, texto_usuario):
+        """Construye una respuesta con retroalimentación balanceada"""
+        partes_respuesta = []
+        
+        # 1. Retroalimentación positiva
+        if analisis['retroalimentacion_positiva']:
+            partes_respuesta.append(f"🎉 {random.choice(analisis['retroalimentacion_positiva'])}")
+        else:
+            elogios = [
+                "Good effort! I understood what you said.",
+                "Nice job expressing yourself!",
+                "Great attempt at conversation!",
+                "Well done! Your message came through clearly."
+            ]
+            partes_respuesta.append(random.choice(elogios))
+        
+        # 2. Mostrar entendimiento de lo que dijo el usuario
+        partes_respuesta.append(f"🗣️ You said: \"{texto_usuario}\"")
+        
+        # 3. Correcciones específicas de pronunciación
+        if analisis['palabras_problematicas']:
+            partes_respuesta.append("\n🎯 **Pronunciation tips:**")
+            for problema in analisis['palabras_problematicas'][:2]:  # Máximo 2 correcciones
+                partes_respuesta.append(
+                    f"• For '{problema['palabra']}': {problema['explicacion']}\n"
+                    f"  📝 Write it like: {problema['palabra']}\n"
+                    f"  🔊 Sound like: /{problema['sonido_correcto']}/"
+                )
+        
+        # 4. Consejos generales
         if analisis['consejos']:
-            respuesta += "🎯 **Pronunciation tips:**\n"
-            for consejo in analisis['consejos']:
-                respuesta += f"• {consejo}\n"
-            respuesta += "\n"
+            partes_respuesta.append("\n💡 **Practice tips:**")
+            for consejo in analisis['consejos'][:2]:  # Máximo 2 consejos
+                partes_respuesta.append(f"• {consejo}")
         
-        # Pregunta de seguimiento para mantener conversación
+        # 5. Pregunta de seguimiento para continuar la conversación
         preguntas_seguimiento = [
-            "Can you tell me more about that?",
-            "How did that make you feel?",
-            "What happened next?",
-            "Why do you think that?",
-            "Can you give me an example?",
-            "What's your opinion on this?"
+            "What do you think about that?",
+            "Can you tell me more about your day?",
+            "How does that make you feel?",
+            "What would you like to practice next?",
+            "Can you give me another example?",
+            "What are your plans for the rest of the day?",
+            "Why do you think that is important?",
+            "How was your experience with that?",
+            "What would you do differently next time?"
         ]
         
-        respuesta += f"💬 **Let's continue:** {random.choice(preguntas_seguimiento)}"
+        partes_respuesta.append(f"\n💬 **Let's continue our conversation:** {random.choice(preguntas_seguimiento)}")
         
-        return respuesta
+        return "\n".join(partes_respuesta)
 
-# Instancia global del sistema coach
-coach = SistemaCoach()
+# Instancia global del sistema coach mejorado
+coach_mejorado = SistemaCoach()
 
 # === VOCABULARIO PARA EL JUEGO ===
 vocabulario = {
@@ -243,39 +288,27 @@ def validar_respuesta_juego():
         
         print(f"🎯 Validando: '{palabra_original}' -> '{respuesta_usuario}' (Dificultad: {dificultad})")
 
-        # ✅ DETECCIÓN INTELIGENTE POR DIFICULTAD
-        if dificultad == 'difícil':
-            # En difícil, las frases YA están en inglés - NO traducir
+        # ✅ CORRECCIÓN DEFINITIVA - SIEMPRE TRADUCIR DESDE ESPAÑOL EN FÁCIL Y NORMAL
+        if dificultad in ['fácil', 'normal']:
+            # Para fácil y normal, SIEMPRE traducir del español al inglés
+            traduccion = translator.translate(palabra_original, src='es', dest='en')
+            traduccion_correcta = traduccion.text
+            print(f"🔄 Traducción ES→EN: '{palabra_original}' -> '{traduccion_correcta}'")
+        else:
+            # En difícil, las frases YA están en inglés
             traduccion_correcta = palabra_original
             print(f"🎓 Dificultad difícil - Usando original: '{traduccion_correcta}'")
-        else:
-            # Para fácil y normal, detectar idioma y traducir si es español
-            try:
-                deteccion = translator.detect(palabra_original)
-                idioma_original = deteccion.lang
-                confianza = deteccion.confidence
-                
-                if idioma_original == 'es' or confianza < 0.6:
-                    traduccion = translator.translate(palabra_original, src='es', dest='en')
-                    traduccion_correcta = traduccion.text
-                    print(f"🔄 Traducción: '{palabra_original}' -> '{traduccion_correcta}'")
-                else:
-                    traduccion_correcta = palabra_original
-                    print(f"✅ Ya en inglés: '{traduccion_correcta}'")
-                    
-            except Exception as e:
-                print(f"❌ Error en detección: {e}")
-                # Fallback: traducir asumiendo español
-                traduccion = translator.translate(palabra_original, src='es', dest='en')
-                traduccion_correcta = traduccion.text
 
         # Limpiar respuestas
         respuesta_limpia = respuesta_usuario.lower().strip()
         correcta_limpia = traduccion_correcta.lower().strip()
         
-        # ✅ COMPARACIÓN MÁS INTELIGENTE
+        print(f"🔍 Comparando: '{respuesta_limpia}' vs '{correcta_limpia}'")
+        
+        # ✅ COMPARACIÓN MÁS FLEXIBLE PERO PRECISA
         es_correcta = _es_respuesta_correcta(respuesta_limpia, correcta_limpia, dificultad)
         
+        # Puntos basados en la dificultad
         puntos_obtenidos = {
             "fácil": 10,
             "normal": 25,
@@ -305,9 +338,19 @@ def _es_respuesta_correcta(respuesta, correcta, dificultad):
     
     # Para dificultad fácil, ser más flexible
     if dificultad == 'fácil':
-        # Solo comparar palabras clave
-        palabras_respuesta = set(respuesta.split())
-        palabras_correcta = set(correcta.split())
+        # Solo comparar palabras clave (sin artículos, sin puntuación)
+        articulos = ['the ', 'a ', 'an ']
+        respuesta_limpia = respuesta
+        correcta_limpia = correcta
+        
+        for articulo in articulos:
+            respuesta_limpia = respuesta_limpia.replace(articulo, '')
+            correcta_limpia = correcta_limpia.replace(articulo, '')
+        
+        palabras_respuesta = set(respuesta_limpia.split())
+        palabras_correcta = set(correcta_limpia.split())
+        
+        # Si hay al menos una palabra en común, es correcto
         return len(palabras_respuesta.intersection(palabras_correcta)) > 0
     
     # Para normal y difícil, comparación más estricta pero inteligente
@@ -315,7 +358,7 @@ def _es_respuesta_correcta(respuesta, correcta, dificultad):
         respuesta == correcta,
         respuesta in correcta,
         correcta in respuesta,
-        respuesta.replace('the ', '').replace('a ', '') == correcta.replace('the ', '').replace('a ', ''),
+        respuesta.replace('the ', '').replace('a ', '').replace('an ', '') == correcta.replace('the ', '').replace('a ', '').replace('an ', ''),
         respuesta.replace("'s", '').replace("'", '') == correcta.replace("'s", '').replace("'", '')
     ]
     
@@ -373,137 +416,6 @@ def analizar_fluidez():
         "duracion_efectiva": duracion
     })
 
-# === SISTEMA CONVERSACIONAL MEJORADO ===
-def es_solicitud_traduccion(texto):
-    texto_lower = texto.lower().strip()
-    
-    patrones_traduccion = [
-        r'.*how do you say.*',
-        r'.*cómo se dice.*', 
-        r'.*traduce.*',
-        r'.*translate.*',
-        r'.*what is.*in english.*',
-        r'.*qué es.*en inglés.*',
-        r'.*como se dice.*',
-        r'.*how to say.*'
-    ]
-    
-    return any(re.search(patron, texto_lower) for patron in patrones_traduccion)
-
-def extraer_palabra_traducir(texto):
-    texto_lower = texto.lower().strip()
-    
-    patrones = [
-        r'how do you say (.+?) (?:in english|please|por favor|\?|$)',
-        r'cómo se dice (.+?) (?:en inglés|por favor|\?|$)',
-        r'traduce (.+?) (?:a inglés|por favor|\?|$)',
-        r'translate (.+?) (?:to english|please|\?|$)',
-        r'what is (.+?) in english',
-        r'qué es (.+?) en inglés'
-    ]
-    
-    for patron in patrones:
-        match = re.search(patron, texto_lower)
-        if match:
-            palabra = match.group(1).strip()
-            palabra = re.sub(r'[?.,!¿¡]', '', palabra)
-            return palabra
-    
-    palabras_clave = ['say', 'dice', 'traduce', 'translate', 'what is', 'qué es']
-    palabras = texto_lower.split()
-    
-    for i, palabra in enumerate(palabras):
-        if palabra in palabras_clave and i + 1 < len(palabras):
-            candidata = palabras[i + 1]
-            candidata = re.sub(r'[?.,!¿¡]', '', candidata)
-            return candidata
-    
-    return None
-
-def es_saludo(texto):
-    saludos = [
-        'hello', 'hi', 'hey', 'hola', 'good morning', 'good afternoon',
-        'good evening', 'how are you', 'qué tal', 'cómo estás'
-    ]
-    texto_lower = texto.lower()
-    return any(saludo in texto_lower for saludo in saludos)
-
-def es_despedida(texto):
-    despedidas = ['bye', 'goodbye', 'see you', 'adiós', 'chao', 'nos vemos']
-    texto_lower = texto.lower()
-    return any(despedida in texto_lower for despedida in despedidas)
-
-def generar_respuesta_conversacional(texto_usuario):
-    texto_lower = texto_usuario.lower()
-    
-    if es_saludo(texto_usuario):
-        saludos = [
-            "¡Hello! I'm Eli, your English pronunciation coach. How can I help you practice today?",
-            "Hi there! I'm here to help you improve your English pronunciation. What would you like to work on?",
-            "Hey! I'm Eli, your pronunciation tutor. Ready to practice speaking English?"
-        ]
-        return random.choice(saludos), []
-    
-    if es_despedida(texto_usuario):
-        despedidas = [
-            "Goodbye! Great pronunciation practice today. See you next time!",
-            "Bye! Keep practicing your English pronunciation every day.",
-            "See you later! Don't forget to practice speaking regularly."
-        ]
-        return random.choice(despedidas), []
-    
-    if any(p in texto_lower for p in ['who are you', 'what are you', 'qué eres', 'cómo te llamas']):
-        return "I'm Eli, your English pronunciation coach! I'm here to help you improve your speaking skills through conversation and pronunciation practice.", []
-    
-    if any(p in texto_lower for p in ['how are you', 'cómo estás', 'qué tal']):
-        estados = [
-            "I'm doing great! Ready to help you practice English pronunciation. How about you?",
-            "I'm wonderful! Excited to practice English pronunciation with you today.",
-            "I'm doing well, thank you for asking! How are you feeling about your English practice?"
-        ]
-        return random.choice(estados), []
-    
-    if es_solicitud_traduccion(texto_usuario):
-        palabra = extraer_palabra_traducir(texto_usuario)
-        print(f"🔍 Palabra a traducir detectada: '{palabra}'")
-        
-        if palabra and len(palabra) > 1:
-            try:
-                deteccion_idioma = translator.detect(palabra)
-                idioma_original = deteccion_idioma.lang
-                confianza = deteccion_idioma.confidence
-                
-                print(f"🌐 Idioma detectado: {idioma_original} (confianza: {confianza})")
-                
-                if idioma_original == 'es' or confianza < 0.8:
-                    traduccion = translator.translate(palabra, src='es', dest='en')
-                    texto_traducido = traduccion.text
-                    
-                    if texto_traducido.lower() != palabra.lower():
-                        consejos = [
-                            f"Practice saying: '{texto_traducido}'", 
-                            f"Repeat the word 3 times: '{texto_traducido}'",
-                            "Focus on the pronunciation of this new word"
-                        ]
-                        return f"✅ **Translation**: '{palabra}' → '{texto_traducido}'\n\n🎯 **Now let's practice pronouncing it!** Repeat after me: '{texto_traducido}'", consejos
-                    else:
-                        return f"🤔 It seems '{palabra}' doesn't need translation. Let's practice pronouncing it clearly!", [f"Practice saying '{palabra}' with clear pronunciation"]
-                else:
-                    return f"🔍 I detected that '{palabra}' might already be in English. Let's practice its pronunciation!", [f"Focus on pronouncing '{palabra}' clearly"]
-                    
-            except Exception as e:
-                print(f"❌ Error en traducción: {e}")
-                return f"🔄 Let's practice the pronunciation of '{palabra}'! Say it clearly.", [f"Practice saying '{palabra}'"]
-        else:
-            return "I'd be happy to help with translations! Please tell me what specific word you'd like to translate. For example: 'How do you say casa in English?'", []
-    
-    respuestas = [
-        f"Great speaking practice! You said: '{texto_usuario}'. Let me give you some pronunciation tips.",
-        f"Good effort! I heard: '{texto_usuario}'. Now let's work on your pronunciation.",
-        f"Nice attempt! You mentioned: '{texto_usuario}'. Here are some tips to improve your speaking."
-    ]
-    return random.choice(respuestas), []
-
 # === FUNCIONES DE AUDIO ===
 def procesar_audio(audio_file):
     try:
@@ -544,17 +456,18 @@ def transcribir_audio(wav_buffer):
         raise Exception(f"Error con el servicio de reconocimiento: {e}")
 
 def generar_pregunta():
+    """Genera preguntas conversacionales más naturales"""
     preguntas = [
-        "What do you like to do on weekends?",
-        "Do you have any pets?",
-        "What's your favorite food?",
-        "Where would you like to travel?",
-        "What do you usually eat for breakfast?",
-        "What kind of music do you enjoy?",
-        "Tell me about your family.",
+        "What do you enjoy doing in your free time?",
+        "Can you describe your favorite place to relax?",
+        "What's something you're looking forward to this week?",
+        "Tell me about a book or movie you recently enjoyed.",
+        "What kind of music do you like to listen to?",
+        "How do you usually spend your weekends?",
         "What's your favorite season and why?",
-        "Do you enjoy sports? Which ones?",
-        "What was the last movie you watched?"
+        "Can you describe your ideal vacation?",
+        "What's a skill you'd like to learn in the future?",
+        "Tell me about someone who inspires you."
     ]
     return random.choice(preguntas)
 
@@ -565,13 +478,13 @@ def conversar_audio():
         return jsonify({"estado": "error", "respuesta": "No audio file"}), 400
 
     audio_file = request.files['audio']
-    pregunta_actual = request.form.get('pregunta_actual', generar_pregunta())
+    pregunta_actual = request.form.get('pregunta_actual', "")
     
     try:
         wav_buffer, duracion_audio = procesar_audio(audio_file)
         texto_usuario = transcribir_audio(wav_buffer)
         
-        print(f"🗣️ Usuario dijo: {texto_usuario} (Duración: {duracion_audio}s)")
+        print(f"🗣️ Usuario dijo: '{texto_usuario}' (Duración: {duracion_audio:.2f}s)")
 
         if not texto_usuario:
             return jsonify({
@@ -579,25 +492,19 @@ def conversar_audio():
                 "respuesta": "I couldn't hear any speech. Please try again and speak clearly for 2-3 seconds."
             }), 400
 
-        # ✅ ANÁLISIS COMPLETO CON EL SISTEMA COACH
-        analisis = coach.analizar_calidad_respuesta(texto_usuario, duracion_audio)
-        respuesta = coach.generar_respuesta_motivacional(analisis, texto_usuario)
-
-        # Actualizar estadísticas
-        coach.estadisticas['total_palabras'] += len(texto_usuario.split())
-        coach.estadisticas['sesiones_hoy'] += 1
-
-        # Generar nueva pregunta si es apropiado
-        cambiar_pregunta = len(texto_usuario.split()) > 2
-        nueva_pregunta = generar_pregunta() if cambiar_pregunta else pregunta_actual
-
+        # ✅ USAR EL SISTEMA COACH MEJORADO
+        respuesta_coach = coach_mejorado.generar_respuesta_conversacional(texto_usuario, duracion_audio)
+        
+        # Determinar si cambiar la pregunta
+        cambiar_pregunta = respuesta_coach["pregunta_seguimiento"] and len(texto_usuario.split()) > 2
+        
         # Guardar en historial
         historial.append({
             "usuario": texto_usuario,
-            "eli": respuesta,
+            "eli": respuesta_coach["respuesta"],
             "duracion": duracion_audio,
-            "analisis": analisis,
-            "pregunta": pregunta_actual
+            "tipo": respuesta_coach["tipo"],
+            "correcciones": respuesta_coach.get("correcciones", [])
         })
 
         if len(historial) > 50:
@@ -605,16 +512,15 @@ def conversar_audio():
 
         return jsonify({
             "estado": "exito",
-            "respuesta": respuesta,
+            "respuesta": respuesta_coach["respuesta"],
             "transcripcion": texto_usuario,
-            "nueva_pregunta": nueva_pregunta,
-            "puntuacion_fluidez": analisis['puntuacion_fluidez'],
-            "consejos": analisis['consejos'],
-            "elogios": analisis['elogios']
+            "nueva_pregunta": generar_pregunta() if cambiar_pregunta else pregunta_actual,
+            "correcciones_pronunciacion": respuesta_coach.get("correcciones", []),
+            "consejos": respuesta_coach.get("consejos", [])
         })
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error en conversación: {e}")
         return jsonify({
             "estado": "error",
             "respuesta": f"Error processing audio: {str(e)}"
