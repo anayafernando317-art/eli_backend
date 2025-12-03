@@ -2,8 +2,8 @@ Flask==2.3.3
 flask-cors==4.0.0
 SpeechRecognition==3.10.0
 pydub==0.25.1
+googletrans==4.0.0rc1
 gunicorn==21.2.0
 Werkzeug==2.3.7
-googletrans==3.1.0a0
 requests==2.31.0
-urllib3==1.26.18
+httpx==0.24.1
