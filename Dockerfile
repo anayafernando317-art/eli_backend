@@ -1,40 +1,26 @@
 FROM python:3.10-slim
 
-# Instalar dependencias del sistema necesarias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     ffmpeg \
-    libsndfile1 \
-    curl \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /tmp/* /var/tmp/*
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copiar requirements primero para cache eficiente
+# Copiar requirements
 COPY requirements.txt .
 
-# Instalar dependencias Python optimizadas
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip cache purge
+# Instalar dependencias
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar aplicación (nombre específico: eli_backend.py)
+# Copiar aplicación
 COPY eli_backend.py .
 
-# Variables de entorno para optimizar
+# Variables de entorno
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
 ENV PORT=5000
-ENV PYTHONIOENCODING=utf-8
-ENV FLASK_DEBUG=0
-
-# Usar usuario no-root para seguridad
-RUN useradd -m -u 1000 eliuser \
-    && chown -R eliuser:eliuser /app
-USER eliuser
 
 EXPOSE 5000
 
-# Comando específico para eli_backend.py con optimizaciones para plan gratuito
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "2", "--timeout", "90", "--preload", "eli_backend:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "2", "--timeout", "60", "eli_backend:app"]
