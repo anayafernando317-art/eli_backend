@@ -30,8 +30,8 @@ if os.environ.get('RENDER'):
     logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 print("=" * 60)
-print("🚀 Eli English Tutor - Backend Optimizado v5.1")
-print("📁 Archivo: eli_backend.py")
+print("🚀 Eli English Tutor - Backend Unificado v6.0")
+print("🎯 TODA la lógica en backend - Flutter solo interfaz")
 print("=" * 60)
 
 # ============================================
@@ -64,9 +64,7 @@ class HybridTranslator:
         self.translation_cache = {}
         self.cache_size = 200
         
-        # Intentar inicializar traductor externo
         self._try_init_external()
-        
         logger.info(f"✅ HybridTranslator inicializado. Externo: {self.use_external}")
     
     def _try_init_external(self):
@@ -74,7 +72,6 @@ class HybridTranslator:
         try:
             from deep_translator import GoogleTranslator
             self.external_translator = GoogleTranslator(source='auto', target='en')
-            # Test rápido
             test = self.external_translator.translate('hola')
             if test and test.lower() == 'hello':
                 logger.info("✅ Traductor externo (Google) listo")
@@ -94,229 +91,68 @@ class HybridTranslator:
             'por favor': 'please', 'gracias': 'thank you', 'de nada': 'you are welcome',
             'lo siento': 'i am sorry', 'perdón': 'excuse me', 'con permiso': 'excuse me',
             
-            # === PRESENTACIONES ===
-            'cómo te llamas': 'what is your name', 'me llamo': 'my name is',
-            'mucho gusto': 'nice to meet you', 'de dónde eres': 'where are you from',
-            'soy de': 'i am from', 'cuántos años tienes': 'how old are you',
-            'tengo años': 'i am years old', 'qué estudias': 'what do you study',
-            'estudio': 'i study', 'voy a la escuela': 'i go to school',
+            # === PERSONAS Y FAMILIA ===
+            'yo': 'i', 'tú': 'you', 'él': 'he', 'ella': 'she', 'nosotros': 'we',
+            'ustedes': 'you', 'ellos': 'they', 'persona': 'person', 'gente': 'people',
+            'hombre': 'man', 'mujer': 'woman', 'niño': 'child', 'niña': 'girl',
+            'amigo': 'friend', 'familia': 'family', 'padre': 'father', 'madre': 'mother',
+            'hermano': 'brother', 'hermana': 'sister', 'hijo': 'son', 'hija': 'daughter',
             
-            # === ESTADOS Y SENTIMIENTOS ===
-            'cómo estás': 'how are you', 'estoy bien': 'i am fine',
-            'estoy mal': 'i am not well', 'estoy feliz': 'i am happy',
-            'estoy triste': 'i am sad', 'estoy cansado': 'i am tired',
-            'estoy emocionado': 'i am excited', 'estoy nervioso': 'i am nervous',
-            'estoy aburrido': 'i am bored', 'me siento bien': 'i feel good',
-            
-            # === PREGUNTAS COMUNES ===
-            'qué haces': 'what are you doing', 'dónde vives': 'where do you live',
-            'qué te gusta': 'what do you like', 'por qué': 'why',
-            'cuándo': 'when', 'cómo': 'how', 'cuál': 'which',
-            'quién': 'who', 'cuánto': 'how much', 'cuántos': 'how many',
-            
-            # === FAMILIA ===
-            'mi familia': 'my family', 'mis padres': 'my parents',
-            'mi madre': 'my mother', 'mi padre': 'my father',
-            'mis hermanos': 'my siblings', 'mi hermana': 'my sister',
-            'mi hermano': 'my brother', 'mis abuelos': 'my grandparents',
-            
-            # === ESCUELA Y EDUCACIÓN ===
-            'la escuela': 'the school', 'el colegio': 'the school',
-            'el maestro': 'the teacher', 'la maestra': 'the teacher',
-            'los estudiantes': 'the students', 'la clase': 'the class',
-            'el examen': 'the exam', 'la tarea': 'the homework',
-            'el proyecto': 'the project', 'aprender': 'to learn',
-            'estudiar': 'to study', 'enseñar': 'to teach',
-            
-            # === HOBBIES Y ACTIVIDADES ===
-            'me gusta': 'i like', 'no me gusta': 'i do not like',
-            'jugar': 'to play', 'leer': 'to read', 'escribir': 'to write',
-            'dibujar': 'to draw', 'cantar': 'to sing', 'bailar': 'to dance',
-            'correr': 'to run', 'nadar': 'to swim', 'cocinar': 'to cook',
-            'ver televisión': 'to watch tv', 'escuchar música': 'to listen to music',
-            
-            # === RUTINA DIARIA ===
-            'me despierto': 'i wake up', 'me levanto': 'i get up',
-            'me baño': 'i take a shower', 'desayuno': 'i eat breakfast',
-            'voy a la escuela': 'i go to school', 'almuerzo': 'i eat lunch',
-            'regreso a casa': 'i return home', 'ceno': 'i eat dinner',
-            'me duermo': 'i go to sleep', 'todos los días': 'every day',
+            # === LUGARES ===
+            'casa': 'house', 'escuela': 'school', 'trabajo': 'work', 'ciudad': 'city',
+            'país': 'country', 'mundo': 'world', 'calle': 'street', 'parque': 'park',
+            'restaurante': 'restaurant', 'hospital': 'hospital', 'tienda': 'store',
+            'biblioteca': 'library', 'universidad': 'university', 'playa': 'beach',
             
             # === TIEMPO ===
             'hoy': 'today', 'mañana': 'tomorrow', 'ayer': 'yesterday',
-            'la semana': 'the week', 'el fin de semana': 'the weekend',
-            'el mes': 'the month', 'el año': 'the year',
-            'en la mañana': 'in the morning', 'en la tarde': 'in the afternoon',
-            'en la noche': 'at night', 'ahora': 'now', 'siempre': 'always',
-            
-            # === COMIDA ===
-            'comida': 'food', 'desayuno': 'breakfast', 'almuerzo': 'lunch',
-            'cena': 'dinner', 'agua': 'water', 'leche': 'milk',
-            'pan': 'bread', 'arroz': 'rice', 'pollo': 'chicken',
-            'carne': 'meat', 'pescado': 'fish', 'frutas': 'fruits',
-            'verduras': 'vegetables', 'postre': 'dessert',
-            
-            # === LUGARES ===
-            'casa': 'house', 'escuela': 'school', 'parque': 'park',
-            'cine': 'movie theater', 'centro comercial': 'mall',
-            'biblioteca': 'library', 'restaurante': 'restaurant',
-            'playa': 'beach', 'ciudad': 'city', 'campo': 'countryside',
-            
-            # === ANIMALES ===
-            'animal': 'animal', 'perro': 'dog', 'gato': 'cat',
-            'pájaro': 'bird', 'pez': 'fish', 'caballo': 'horse',
-            'vaca': 'cow', 'conejo': 'rabbit', 'tortuga': 'turtle',
-            
-            # === COLORES ===
-            'color': 'color', 'rojo': 'red', 'azul': 'blue',
-            'verde': 'green', 'amarillo': 'yellow', 'naranja': 'orange',
-            'morado': 'purple', 'rosa': 'pink', 'blanco': 'white',
-            'negro': 'black', 'gris': 'gray',
-            
-            # === NÚMEROS (1-20) ===
-            'uno': 'one', 'dos': 'two', 'tres': 'three',
-            'cuatro': 'four', 'cinco': 'five', 'seis': 'six',
-            'siete': 'seven', 'ocho': 'eight', 'nueve': 'nine',
-            'diez': 'ten', 'once': 'eleven', 'doce': 'twelve',
-            'trece': 'thirteen', 'catorce': 'fourteen', 'quince': 'fifteen',
-            'dieciséis': 'sixteen', 'diecisiete': 'seventeen', 'dieciocho': 'eighteen',
-            'diecinueve': 'nineteen', 'veinte': 'twenty',
-            
-            # === DÍAS DE LA SEMANA ===
+            'día': 'day', 'noche': 'night', 'semana': 'week', 'mes': 'month',
+            'año': 'year', 'hora': 'hour', 'minuto': 'minute', 'segundo': 'second',
             'lunes': 'monday', 'martes': 'tuesday', 'miércoles': 'wednesday',
             'jueves': 'thursday', 'viernes': 'friday', 'sábado': 'saturday',
             'domingo': 'sunday',
             
-            # === MESES ===
-            'enero': 'january', 'febrero': 'february', 'marzo': 'march',
-            'abril': 'april', 'mayo': 'may', 'junio': 'june',
-            'julio': 'july', 'agosto': 'august', 'septiembre': 'september',
-            'octubre': 'october', 'noviembre': 'november', 'diciembre': 'december',
+            # === COMIDA ===
+            'agua': 'water', 'comida': 'food', 'desayuno': 'breakfast',
+            'almuerzo': 'lunch', 'cena': 'dinner', 'fruta': 'fruit',
+            'verdura': 'vegetable', 'carne': 'meat', 'pescado': 'fish',
+            'pan': 'bread', 'arroz': 'rice', 'leche': 'milk', 'café': 'coffee',
+            'té': 'tea', 'azúcar': 'sugar', 'sal': 'salt',
             
-            # === ESTACIONES ===
-            'primavera': 'spring', 'verano': 'summer', 'otoño': 'autumn',
-            'invierno': 'winter',
+            # === EDUCACIÓN ===
+            'profesor': 'teacher', 'estudiante': 'student', 'clase': 'class',
+            'libro': 'book', 'papel': 'paper', 'lápiz': 'pencil', 'pluma': 'pen',
+            'computadora': 'computer', 'internet': 'internet', 'aprender': 'learn',
+            'estudiar': 'study', 'enseñar': 'teach', 'examen': 'exam',
+            'pregunta': 'question', 'respuesta': 'answer',
             
-            # === TIEMPO ATMOSFÉRICO ===
-            'sol': 'sun', 'lluvia': 'rain', 'nubes': 'clouds',
-            'viento': 'wind', 'nieve': 'snow', 'calor': 'heat',
-            'frío': 'cold', 'temperatura': 'temperature',
+            # === VERBOS COMUNES ===
+            'ser': 'to be', 'estar': 'to be', 'tener': 'to have', 'hacer': 'to do',
+            'ir': 'to go', 'venir': 'to come', 'ver': 'to see', 'mirar': 'to look',
+            'escuchar': 'to listen', 'hablar': 'to speak', 'decir': 'to say',
+            'pensar': 'to think', 'saber': 'to know', 'querer': 'to want',
+            'gustar': 'to like', 'amar': 'to love', 'odiar': 'to hate',
+            'comprar': 'to buy', 'vender': 'to sell', 'trabajar': 'to work',
+            'jugar': 'to play', 'dormir': 'to sleep', 'despertar': 'to wake up',
             
-            # === PARTES DEL CUERPO ===
-            'cabeza': 'head', 'ojos': 'eyes', 'nariz': 'nose',
-            'boca': 'mouth', 'orejas': 'ears', 'manos': 'hands',
-            'pies': 'feet', 'brazos': 'arms', 'piernas': 'legs',
+            # === ADJETIVOS ===
+            'bueno': 'good', 'malo': 'bad', 'grande': 'big', 'pequeño': 'small',
+            'alto': 'tall', 'bajo': 'short', 'feliz': 'happy', 'triste': 'sad',
+            'inteligente': 'smart', 'importante': 'important', 'difícil': 'difficult',
+            'fácil': 'easy', 'rápido': 'fast', 'lento': 'slow', 'nuevo': 'new',
+            'viejo': 'old', 'joven': 'young', 'hermoso': 'beautiful', 'feo': 'ugly',
             
-            # === ROPA ===
-            'ropa': 'clothes', 'camisa': 'shirt', 'pantalón': 'pants',
-            'vestido': 'dress', 'zapatos': 'shoes', 'calcetines': 'socks',
-            'chaqueta': 'jacket', 'sombrero': 'hat',
-            
-            # === TRANSPORTE ===
-            'carro': 'car', 'autobús': 'bus', 'bicicleta': 'bicycle',
-            'metro': 'subway', 'avión': 'airplane', 'barco': 'boat',
-            
-            # === TECNOLOGÍA ===
-            'computadora': 'computer', 'teléfono': 'phone', 'internet': 'internet',
-            'televisión': 'television', 'cámara': 'camera', 'videojuegos': 'video games',
-            
-            # === PROFESIONES ===
-            'médico': 'doctor', 'profesor': 'teacher', 'ingeniero': 'engineer',
-            'abogado': 'lawyer', 'científico': 'scientist', 'artista': 'artist',
-            'músico': 'musician', 'deportista': 'athlete',
-            
-            # === FRASES ÚTILES PARA CLASE ===
-            'no entiendo': 'i do not understand',
-            'puede repetir por favor': 'can you repeat please',
-            'más despacio por favor': 'slower please',
-            'cómo se pronuncia': 'how do you pronounce',
-            'qué significa': 'what does it mean',
-            'cómo se escribe': 'how do you spell',
-            'puedo intentarlo': 'can i try',
-            'es correcto': 'is it correct',
-            'necesito ayuda': 'i need help',
-            'puedo ir al baño': 'can i go to the bathroom',
-            'tengo una pregunta': 'i have a question',
-            'no sé': 'i do not know',
-            'estoy confundido': 'i am confused',
-            'puede explicar de nuevo': 'can you explain again',
-            'quiero participar': 'i want to participate',
-            
-            # === EXPRESIONES DE OPINIÓN ===
-            'me gusta mucho': 'i like it a lot',
-            'no me gusta nada': 'i do not like it at all',
-            'pienso que': 'i think that',
-            'creo que': 'i believe that',
-            'en mi opinión': 'in my opinion',
-            'estoy de acuerdo': 'i agree',
-            'no estoy de acuerdo': 'i disagree',
-            'tal vez': 'maybe',
-            'probablemente': 'probably',
-            'definitivamente': 'definitely',
-            
-            # === CONECTORES LÓGICOS ===
-            'y': 'and', 'o': 'or', 'pero': 'but',
-            'porque': 'because', 'cuando': 'when',
-            'donde': 'where', 'como': 'how', 'si': 'if',
-            'entonces': 'then', 'también': 'also',
-            'además': 'besides', 'sin embargo': 'however',
-            'por ejemplo': 'for example', 'en conclusión': 'in conclusion',
-            
-            # === VERBOS IMPORTANTES ===
-            'ser': 'to be', 'estar': 'to be', 'tener': 'to have',
-            'hacer': 'to do', 'ir': 'to go', 'venir': 'to come',
-            'ver': 'to see', 'decir': 'to say', 'poder': 'can',
-            'querer': 'to want', 'saber': 'to know', 'conocer': 'to know',
-            'poner': 'to put', 'salir': 'to go out', 'volver': 'to return',
-            'pedir': 'to ask for', 'seguir': 'to continue', 'encontrar': 'to find',
-            'pensar': 'to think', 'sentir': 'to feel', 'vivir': 'to live',
-            'empezar': 'to start', 'terminar': 'to finish', 'cambiar': 'to change',
-            'esperar': 'to wait', 'buscar': 'to look for', 'encontrar': 'to find',
-            'recordar': 'to remember', 'olvidar': 'to forget', 'elegir': 'to choose',
-            'necesitar': 'to need', 'ayudar': 'to help', 'trabajar': 'to work',
-            'ganar': 'to win', 'perder': 'to lose', 'comprar': 'to buy',
-            'vender': 'to sell', 'pagar': 'to pay', 'costar': 'to cost',
-            'viajar': 'to travel', 'visitar': 'to visit', 'conocer': 'to meet',
-            'amar': 'to love', 'odiar': 'to hate', 'preferir': 'to prefer',
-            
-            # === ADJETIVOS COMUNES ===
-            'grande': 'big', 'pequeño': 'small', 'alto': 'tall',
-            'bajo': 'short', 'largo': 'long', 'corto': 'short',
-            'ancho': 'wide', 'estrecho': 'narrow', 'nuevo': 'new',
-            'viejo': 'old', 'joven': 'young', 'bonito': 'pretty',
-            'feo': 'ugly', 'bueno': 'good', 'malo': 'bad',
-            'fácil': 'easy', 'difícil': 'difficult', 'interesante': 'interesting',
-            'aburrido': 'boring', 'divertido': 'fun', 'serio': 'serious',
-            'importante': 'important', 'necesario': 'necessary', 'posible': 'possible',
-            'imposible': 'impossible', 'rápido': 'fast', 'lento': 'slow',
-            'caliente': 'hot', 'frío': 'cold', 'caro': 'expensive',
-            'barato': 'cheap', 'limpio': 'clean', 'sucio': 'dirty',
-            'lleno': 'full', 'vacío': 'empty', 'feliz': 'happy',
-            'triste': 'sad', 'enojado': 'angry', 'calmado': 'calm',
-            'ocupado': 'busy', 'libre': 'free', 'listo': 'ready',
-            'cansado': 'tired', 'despierto': 'awake', 'dormido': 'asleep',
-            
-            # === FRASES COMPLEJAS PARA PRÁCTICA ===
-            'me gustaría aprender inglés': 'i would like to learn english',
-            'quiero mejorar mi pronunciación': 'i want to improve my pronunciation',
-            'es difícil pero importante': 'it is difficult but important',
-            'practico todos los días': 'i practice every day',
-            'mi sueño es viajar al extranjero': 'my dream is to travel abroad',
-            'la educación es fundamental': 'education is fundamental',
-            'necesito practicar más': 'i need to practice more',
-            'el esfuerzo vale la pena': 'the effort is worth it',
-            'cada día aprendo algo nuevo': 'every day i learn something new',
-            'confío en mis habilidades': 'i trust my abilities',
-            'los errores son oportunidades': 'mistakes are opportunities',
-            'la práctica hace al maestro': 'practice makes perfect',
-            'nunca es tarde para aprender': 'it is never too late to learn',
-            'tengo metas claras': 'i have clear goals',
-            'quiero ser bilingüe': 'i want to be bilingual',
-            'aprecio tu ayuda': 'i appreciate your help',
-            'estoy comprometido con mi aprendizaje': 'i am committed to my learning',
-            'la constancia es clave': 'consistency is key',
-            'me motiva superarme': 'i am motivated to improve myself',
-            'valoro esta oportunidad': 'i value this opportunity'
+            # === FRASES COMUNES ===
+            '¿cómo estás?': 'how are you?', '¿qué tal?': 'how is it going?',
+            '¿qué pasa?': 'what\'s up?', 'mucho gusto': 'nice to meet you',
+            '¿cómo te llamas?': 'what is your name?', 'me llamo': 'my name is',
+            '¿de dónde eres?': 'where are you from?', 'soy de': 'i am from',
+            '¿cuántos años tienes?': 'how old are you?', 'tengo años': 'i am years old',
+            '¿qué hora es?': 'what time is it?', 'son las': 'it is',
+            '¿dónde está?': 'where is?', 'aquí está': 'here it is',
+            'no entiendo': 'i don\'t understand', '¿puedes repetir?': 'can you repeat?',
+            'habla más despacio': 'speak more slowly', '¿cómo se dice?': 'how do you say?',
+            'necesito ayuda': 'i need help'
         }
     
     def translate_with_retry(self, text, src='auto', dest='en', retries=1):
@@ -327,17 +163,14 @@ class HybridTranslator:
         text_lower = text.lower().strip()
         cache_key = f"{text_lower}_{dest}"
         
-        # 1. Verificar caché
         if cache_key in self.translation_cache:
             return self._format_translation(text, self.translation_cache[cache_key])
         
-        # 2. Buscar en diccionario local (INSTANTÁNEO)
         local_result = self._search_local_dict(text_lower)
         if local_result:
             self.translation_cache[cache_key] = local_result
             return self._format_translation(text, local_result)
         
-        # 3. Si tenemos traductor externo y vale la pena usarlo
         should_use_external = (
             self.use_external and 
             self.external_translator and 
@@ -352,16 +185,14 @@ class HybridTranslator:
                 translated = self.external_translator.translate(text)
                 
                 if translated and translated.lower() != text_lower:
-                    # Guardar en caché y en diccionario local si es útil
                     self.translation_cache[cache_key] = translated
-                    if len(text_lower) < 50:  # Solo frases cortas al diccionario
+                    if len(text_lower) < 50:
                         self.local_dict[text_lower] = translated.lower()
                     return self._format_translation(text, translated)
             except Exception as e:
                 logger.warning(f"External translation failed: {str(e)[:80]}")
                 self.use_external = False
         
-        # 4. Fallback: traducción palabra por palabra
         fallback = self._word_by_word_translation(text)
         self.translation_cache[cache_key] = fallback
         return self._format_translation(text, fallback)
@@ -373,14 +204,12 @@ class HybridTranslator:
         
         text_lower = text.lower()
         
-        # Palabras indicadoras
         spanish_words = ['el', 'la', 'los', 'las', 'un', 'una', 'de', 'que', 
                         'y', 'en', 'por', 'con', 'para', 'sin', 'sobre']
         
         english_words = ['the', 'a', 'an', 'and', 'but', 'or', 'because', 'if',
                         'when', 'where', 'why', 'how', 'what', 'which', 'who']
         
-        # Contar ocurrencias
         spanish_count = 0
         english_count = 0
         
@@ -392,7 +221,6 @@ class HybridTranslator:
             if clean_word in english_words:
                 english_count += 1
         
-        # Determinar resultado
         total = spanish_count + english_count
         if total == 0:
             return 'en', 0.6
@@ -406,14 +234,11 @@ class HybridTranslator:
     
     def _search_local_dict(self, text):
         """Buscar en diccionario local de forma inteligente"""
-        # Coincidencia exacta
         if text in self.local_dict:
             return self.local_dict[text]
         
-        # Buscar frases que contengan el texto
         for phrase_es, phrase_en in self.local_dict.items():
             if len(phrase_es) > 4 and phrase_es in text:
-                # Reemplazar la frase encontrada
                 result = text.replace(phrase_es, phrase_en)
                 return result
         
@@ -466,13 +291,19 @@ class UserSession:
             "total_points": 0,
             "games_played": 0,
             "correct_answers": 0,
-            "total_attempts": 0
+            "total_attempts": 0,
+            "vocabulary_games": 0,
+            "pronunciation_games": 0
         }
         self.xp = 0
         self.level = 1
         self.created_at = datetime.now()
         self.last_interaction = datetime.now()
         self.pronunciation_scores = []
+        self.game_history = []
+        self.last_question = ""
+        self.needs_scaffolding = False
+        self.current_topic = "general"
     
     def add_conversation(self, user_text: str, eli_response: str, score: float):
         self.conversation_history.append({
@@ -483,11 +314,35 @@ class UserSession:
         })
         self.pronunciation_scores.append(score)
         
-        # Limitar tamaño
         if len(self.conversation_history) > 20:
             self.conversation_history.pop(0)
         if len(self.pronunciation_scores) > 10:
             self.pronunciation_scores.pop(0)
+    
+    def add_game_result(self, game_type: str, correct: bool, points: int):
+        self.game_history.append({
+            "game_type": game_type,
+            "correct": correct,
+            "points": points,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        self.game_stats["games_played"] += 1
+        self.game_stats["total_points"] += points
+        
+        if game_type == "vocabulary":
+            self.game_stats["vocabulary_games"] += 1
+        elif game_type == "pronunciation":
+            self.game_stats["pronunciation_games"] += 1
+        
+        if correct:
+            self.game_stats["correct_answers"] += 1
+            self.xp += points
+        
+        self.game_stats["total_attempts"] += 1
+        
+        if len(self.game_history) > 50:
+            self.game_history.pop(0)
     
     def update_level(self):
         if not self.pronunciation_scores:
@@ -514,7 +369,11 @@ class UserSession:
             "game_stats": self.game_stats,
             "conversation_count": len(self.conversation_history),
             "avg_pronunciation_score": round(avg_score, 1),
-            "last_interaction": self.last_interaction.isoformat()
+            "game_history_count": len(self.game_history),
+            "last_interaction": self.last_interaction.isoformat(),
+            "current_topic": self.current_topic,
+            "needs_scaffolding": self.needs_scaffolding,
+            "last_question": self.last_question
         }
 
 class SessionManager:
@@ -544,16 +403,16 @@ class SessionManager:
 session_manager = SessionManager()
 
 # ============================================
-# SISTEMA COACH MEJORADO (TIPO PRAKTIKA)
+# SISTEMA COACH UNIFICADO (TODO EN UNO)
 # ============================================
-class SistemaCoach:
+class SistemaCoachUnificado:
     def __init__(self):
         self.topics = [
             "daily routine", "family", "hobbies", "food", "weather",
             "school", "future plans", "travel", "music", "sports"
         ]
         
-        # Frases de scaffolding por nivel
+        # Scaffolding por nivel
         self.scaffolding_templates = {
             "beginner": [
                 "My name is ______ and I like ______.",
@@ -601,6 +460,28 @@ class SistemaCoach:
             "sports": ["team", "competition", "exercise", "health", "practice",
                       "skills", "championship", "players", "strategy"]
         }
+        
+        # Palabras clave para detectar necesidad de ayuda
+        self.help_keywords = [
+            'help', 'ayuda', 'i dont know', "i don't know", 'no sé',
+            'what should i say', 'how do i say', 'i cant', "i can't",
+            'qué puedo decir', "i'm not sure", 'i need help',
+            'no entiendo', "i don't understand", 'no puedo',
+            'qué digo', 'what do i say', 'cómo se dice',
+            'i need assistance', 'can you help', 'ayúdame'
+        ]
+        
+        # Detectar temas en preguntas
+        self.topic_patterns = {
+            'daily routine': ['routine', 'day', 'morning', 'wake up', 'schedule'],
+            'family': ['family', 'parents', 'brother', 'sister', 'mother', 'father'],
+            'hobbies': ['hobby', 'free time', 'like to do', 'enjoy', 'interest'],
+            'food': ['food', 'eat', 'restaurant', 'dish', 'cook', 'meal'],
+            'travel': ['travel', 'visit', 'country', 'city', 'trip', 'vacation'],
+            'school': ['school', 'study', 'learn', 'education', 'teacher'],
+            'work': ['work', 'job', 'career', 'profession', 'office'],
+            'future': ['future', 'plan', 'goal', 'dream', 'aspiration']
+        }
     
     def detectar_nivel_usuario(self, texto: str, duracion_audio: float) -> str:
         """Detectar nivel del usuario"""
@@ -610,13 +491,11 @@ class SistemaCoach:
         palabras = texto.split()
         word_count = len(palabras)
         
-        # Palabras avanzadas
         advanced_words = {'although', 'however', 'therefore', 'furthermore', 
                          'meanwhile', 'consequently', 'nevertheless'}
         
         advanced_count = sum(1 for word in palabras if word.lower() in advanced_words)
         
-        # Calcular score
         score = 0
         if word_count > 10: score += 3
         elif word_count > 5: score += 2
@@ -643,7 +522,6 @@ class SistemaCoach:
         palabras = texto.lower().split()
         nivel = self.detectar_nivel_usuario(texto, audio_duration)
         
-        # Palabras problemáticas comunes
         problem_patterns = {
             'the': 'ðə (tongue between teeth)',
             'think': 'θɪŋk (soft "th")',
@@ -661,7 +539,6 @@ class SistemaCoach:
                     'explanation': problem_patterns[clean]
                 })
         
-        # Calcular score
         score = 65.0
         
         if audio_duration >= 2.0:
@@ -679,7 +556,6 @@ class SistemaCoach:
         
         score = max(30.0, min(98.0, score))
         
-        # Consejos
         tips = []
         if nivel == "beginner":
             if len(palabras) < 3:
@@ -703,105 +579,107 @@ class SistemaCoach:
             'duration': round(audio_duration, 1)
         }
     
-    def generar_respuesta(self, texto_usuario: str, duracion_audio: float = 0):
-        """Generar respuesta con scaffolding como Praktika"""
+    def procesar_mensaje_completo(self, texto_usuario: str, duracion_audio: float = 0, 
+                                  last_question: str = "", session_data: dict = None):
+        """
+        PROCESA TODO EN UN SOLO PASO - EL CEREBRO COMPLETO
+        
+        Retorna una respuesta completa que Flutter solo necesita mostrar
+        """
+        if not texto_usuario or len(texto_usuario.strip()) < 2:
+            return self._respuesta_sin_audio()
+        
         texto_lower = texto_usuario.lower().strip()
         
-        # 1. DETECTAR NECESIDAD DE AYUDA (KEY IMPROVEMENT)
-        ayuda_keywords = [
-            'no sé', 'no se', 'qué digo', 'what do i say', 
-            'help me', 'ayúdame', 'cómo se dice', 'no entiendo',
-            'i dont know', 'what should i say', 'how do i say',
-            'no puedo', 'i cant', 'i can\'t', 'qué puedo decir'
-        ]
-        
-        necesita_ayuda = any(keyword in texto_lower for keyword in ayuda_keywords)
+        # 1. DETECTAR NECESIDAD DE AYUDA (Scaffolding)
+        necesita_ayuda = any(keyword in texto_lower for keyword in self.help_keywords)
         es_muy_corto = len(texto_usuario.strip()) < 3
+        es_no_sé = texto_lower in ["i don't know", "no sé", "idk", "no se"]
         
         # 2. SI NECESITA AYUDA, DAR SCAFFOLDING COMPLETO
-        if necesita_ayuda or es_muy_corto:
-            return self._respuesta_con_scaffolding(texto_usuario, duracion_audio)
+        if necesita_ayuda or es_muy_corto or es_no_sé:
+            return self._generar_scaffolding_completo(texto_usuario, last_question, session_data)
         
         # 3. Detectar idioma
         lang, confidence = translator.detect_language(texto_usuario)
         if lang == 'es' and confidence > 0.6:
             return self._respuesta_en_espanol(texto_usuario)
         
-        # 4. Análisis normal
+        # 4. Analizar pronunciación normal
         analisis = self.analizar_pronunciacion(texto_usuario, duracion_audio)
         
-        # 5. Construir respuesta
-        response_parts = []
+        # 5. Detectar tema de la conversación
+        detected_topic = self._detectar_tema(texto_usuario, last_question)
         
-        # Encabezado motivacional
-        motivational_phrases = {
-            "beginner": "🎉 **Great effort!** You're making progress!",
-            "intermediate": "🌟 **Well done!** Your English is improving!",
-            "advanced": "💫 **Excellent!** Very impressive English!"
-        }
-        response_parts.append(motivational_phrases.get(analisis['detected_level'], "🎉 Good job!"))
+        # 6. Generar respuesta apropiada
+        if analisis['score'] < 50:
+            response_type = "needs_improvement"
+        elif analisis['score'] > 85:
+            response_type = "excellent"
+        else:
+            response_type = "normal_feedback"
         
-        # Mostrar lo que dijo
-        response_parts.append(f"🗣️ **You said:** \"{texto_usuario}\"")
-        response_parts.append(f"📊 **Pronunciation Score:** {analisis['score']}/100")
+        # 7. Construir respuesta completa
+        respuesta_completa = self._construir_respuesta_completa(
+            texto_usuario, analisis, response_type, detected_topic, last_question
+        )
         
-        # Correcciones
-        if analisis['problem_words']:
-            response_parts.append("\n🎯 **Focus on:**")
-            for pw in analisis['problem_words']:
-                response_parts.append(f"• **{pw['word']}**: {pw['explanation']}")
-        
-        # Consejos
-        if analisis['tips']:
-            response_parts.append("\n💡 **Tips:**")
-            for tip in analisis['tips']:
-                response_parts.append(f"• {tip}")
-        
-        # Pregunta siguiente con scaffolding opcional
-        next_q = self._generar_pregunta(analisis['detected_level'])
-        response_parts.append(f"\n💬 **Next question:** {next_q}")
-        
-        # Si el score es bajo, ofrecer ayuda extra
-        if analisis['score'] < 70:
-            response_parts.append("\n🆘 **Need help answering?** Try using one of these starters:")
-            scaffolding = random.choice(self.scaffolding_templates[analisis['detected_level']])
-            response_parts.append(f"\"{scaffolding}\"")
+        # 8. Preparar datos para scaffolding si el score es bajo
+        scaffolding_data = None
+        if analisis['score'] < 60 or analisis['word_count'] < 4:
+            scaffolding_data = self._preparar_scaffolding_data(
+                detected_topic, analisis['detected_level'], last_question
+            )
         
         return {
-            "respuesta": "\n".join(response_parts),
-            "tipo": "conversacion",
-            "correcciones": analisis['problem_words'],
-            "consejos": analisis['tips'],
-            "pregunta_seguimiento": True,
-            "nivel_detectado": analisis['detected_level'],
+            "type": "conversation_response",
+            "message": respuesta_completa,
             "pronunciation_score": analisis['score'],
-            "next_question": next_q,
-            "ejemplos_respuesta": self._generar_ejemplos(analisis['detected_level'])
+            "detected_level": analisis['detected_level'],
+            "corrections": analisis['problem_words'],
+            "tips": analisis['tips'],
+            "word_count": analisis['word_count'],
+            "duration": analisis['duration'],
+            "needs_scaffolding": scaffolding_data is not None,
+            "scaffolding_data": scaffolding_data,
+            "next_question": self._generar_pregunta_seguimiento(detected_topic, analisis['detected_level']),
+            "detected_topic": detected_topic,
+            "xp_earned": self._calcular_xp(analisis['score'], analisis['word_count']),
+            "response_type": response_type,
+            "timestamp": datetime.now().isoformat()
         }
     
-    def _respuesta_con_scaffolding(self, texto_usuario: str, duracion_audio: float):
-        """Dar ayuda estructurada tipo Praktika"""
-        nivel = self.detectar_nivel_usuario(texto_usuario, duracion_audio)
-        topic = random.choice(self.topics)
+    def _generar_scaffolding_completo(self, texto_usuario: str, last_question: str, session_data: dict = None):
+        """Generar scaffolding completo como Praktika"""
+        # Determinar nivel
+        nivel = "beginner"
+        if session_data and 'current_level' in session_data:
+            nivel = session_data['current_level']
+        
+        # Detectar tema
+        tema = self._detectar_tema_de_pregunta(last_question) if last_question else "general"
         
         # Plantilla de scaffolding
         scaffolding = random.choice(self.scaffolding_templates[nivel])
         
         # Vocabulario del tema
-        vocab = self.topic_vocabulary.get(topic, ["words related to this topic"])
+        vocab = self.topic_vocabulary.get(tema, ["useful words for this topic"])
         
         # Ejemplo completo
-        example = self._generate_example_for_topic(topic, nivel)
+        example = self._generate_example_for_topic(tema, nivel)
         
-        response = f"""## 🆘 **I'll Help You Structure Your Answer!**
+        # Consejos específicos
+        tips = self._get_scaffolding_tips(nivel)
+        
+        response_text = f"""## 🆘 **I'll Help You Structure Your Answer!**
 
-### 🎯 **Topic:** {topic.capitalize()}
+### 🎯 **Topic:** {tema.capitalize()}
 
-### 📝 **Sentence Starter (Your Level):**
+### 📝 **Sentence Starter:**
 \"{scaffolding}\"
 
 ### 🔤 **Useful Vocabulary:**
-{', '.join(vocab[:5])}
+{', '.join(vocab[:6])}
 
 ### 💡 **How to Build Your Answer:**
 1. **Choose** words from the vocabulary list
@@ -813,21 +691,60 @@ class SistemaCoach:
 \"{example}\"
 
 ### 🎤 **Now It's Your Turn:**
-1. Use the sentence starter
-2. Record your answer
-3. I'll give you personalized feedback!
+Record your answer using the structure above!
 
 ### 🔄 **Remember:** It's okay to make mistakes. That's how we learn! 💪"""
-
+        
         return {
-            "respuesta": response,
-            "tipo": "scaffolding",
+            "type": "scaffolding_response",
+            "message": response_text,
             "pronunciation_score": 0,
-            "nivel_detectado": nivel,
-            "next_question": f"Tell me about {topic}",
-            "ejemplos_respuesta": [example],
-            "scaffolding_template": scaffolding,
-            "topic_vocabulary": vocab[:5]
+            "detected_level": nivel,
+            "needs_scaffolding": True,
+            "scaffolding_data": {
+                "template": scaffolding,
+                "examples": [example],
+                "vocabulary": vocab[:6],
+                "topic": tema,
+                "level": nivel,
+                "tips": tips
+            },
+            "next_question": f"Tell me about {tema}",
+            "detected_topic": tema,
+            "xp_earned": 10,  # XP por pedir ayuda
+            "response_type": "scaffolding",
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    def _respuesta_sin_audio(self):
+        """Respuesta cuando no hay audio"""
+        return {
+            "type": "no_speech",
+            "message": """🎤 **I Didn't Hear Anything**
+
+💡 **Tips for Better Recording:**
+• Speak clearly for 2-3 seconds
+• Be in a quiet place
+• Hold microphone closer
+
+🔊 **Try Saying:**
+• "Hello, my name is..."
+• "I like to practice English"
+• "Today is a good day"
+
+🎯 **Ready when you are!**""",
+            "pronunciation_score": 0,
+            "detected_level": "beginner",
+            "needs_scaffolding": True,
+            "scaffolding_data": {
+                "template": "Hello, my name is...",
+                "examples": ["Hello, my name is [Your Name]", "I like to learn English"],
+                "vocabulary": ["hello", "name", "my", "like", "learn"],
+                "topic": "introduction",
+                "level": "beginner"
+            },
+            "next_question": "What is your name?",
+            "xp_earned": 0
         }
     
     def _respuesta_en_espanol(self, texto_usuario: str):
@@ -835,7 +752,8 @@ class SistemaCoach:
         translated = translator.translate_with_retry(texto_usuario, src='es', dest='en')
         
         return {
-            "respuesta": f"""🌐 **I Notice You Spoke in Spanish**
+            "type": "language_switch",
+            "message": f"""🌐 **I Notice You Spoke in Spanish**
 
 🗣️ **In Spanish:** "{texto_usuario}"
 🔤 **In English:** "{translated}"
@@ -849,51 +767,137 @@ class SistemaCoach:
 💡 **Tip:** Don't translate word-for-word. Think of the message!
 
 🔁 **Practice:** "{translated}" """,
-            "tipo": "language_switch",
             "pronunciation_score": 40,
-            "nivel_detectado": "beginner",
-            "ejemplos_respuesta": [translated]
+            "detected_level": "beginner",
+            "needs_scaffolding": True,
+            "scaffolding_data": {
+                "template": translated,
+                "examples": [translated],
+                "vocabulary": ["practice", "speak", "english", "slowly"],
+                "topic": "translation",
+                "level": "beginner"
+            },
+            "next_question": "Can you say that in English?",
+            "xp_earned": 5
         }
     
-    def _respuesta_sin_audio(self):
-        """Respuesta cuando no hay audio"""
+    def _detectar_tema(self, texto: str, last_question: str = ""):
+        """Detectar tema de la conversación"""
+        texto_lower = (texto + " " + last_question).lower()
+        
+        for tema, palabras in self.topic_patterns.items():
+            for palabra in palabras:
+                if palabra in texto_lower:
+                    return tema
+        
+        # Si no se detecta, elegir aleatorio basado en nivel
+        return random.choice(self.topics)
+    
+    def _detectar_tema_de_pregunta(self, pregunta: str):
+        """Detectar tema específico de una pregunta"""
+        if not pregunta:
+            return "general"
+        
+        pregunta_lower = pregunta.lower()
+        for tema, palabras in self.topic_patterns.items():
+            for palabra in palabras:
+                if palabra in pregunta_lower:
+                    return tema
+        
+        return "general"
+    
+    def _construir_respuesta_completa(self, texto_usuario: str, analisis: dict, 
+                                     response_type: str, tema: str, last_question: str):
+        """Construir respuesta completa de feedback"""
+        motivational_phrases = {
+            "beginner": "🎉 **Great effort!** You're making progress!",
+            "intermediate": "🌟 **Well done!** Your English is improving!",
+            "advanced": "💫 **Excellent!** Very impressive English!"
+        }
+        
+        nivel = analisis['detected_level']
+        motivational = motivational_phrases.get(nivel, "🎉 Good job!")
+        
+        parts = [motivational]
+        parts.append(f"🗣️ **You said:** \"{texto_usuario}\"")
+        parts.append(f"📊 **Pronunciation Score:** {analisis['score']}/100")
+        
+        if analisis['problem_words']:
+            parts.append("\n🎯 **Focus on:**")
+            for pw in analisis['problem_words']:
+                parts.append(f"• **{pw['word']}**: {pw['explanation']}")
+        
+        if analisis['tips']:
+            parts.append("\n💡 **Tips:**")
+            for tip in analisis['tips']:
+                parts.append(f"• {tip}")
+        
+        # Sugerencia de scaffolding si el score es bajo
+        if analisis['score'] < 60:
+            parts.append("\n🆘 **Need more help?** Try using this structure:")
+            scaffolding = random.choice(self.scaffolding_templates[nivel])
+            parts.append(f"\"{scaffolding}\"")
+        
+        # Próxima pregunta relacionada
+        next_q = self._generar_pregunta_seguimiento(tema, nivel)
+        parts.append(f"\n💬 **Next question:** {next_q}")
+        
+        return "\n".join(parts)
+    
+    def _preparar_scaffolding_data(self, tema: str, nivel: str, last_question: str = ""):
+        """Preparar datos de scaffolding"""
+        scaffolding = random.choice(self.scaffolding_templates[nivel])
+        vocab = self.topic_vocabulary.get(tema, ["words", "phrases", "sentences"])
+        example = self._generate_example_for_topic(tema, nivel)
+        tips = self._get_scaffolding_tips(nivel)
+        
         return {
-            "respuesta": """🎤 **I Didn't Hear Anything**
-
-💡 **Tips for Better Recording:**
-• Speak clearly for 2-3 seconds
-• Be in a quiet place
-• Hold microphone closer
-
-🔊 **Try Saying:**
-• "Hello, my name is..."
-• "I like to practice English"
-• "Today is a good day"
-
-🎯 **Ready when you are!**""",
-            "tipo": "ayuda",
-            "pronunciation_score": 0,
-            "nivel_detectado": "beginner"
+            "template": scaffolding,
+            "examples": [example],
+            "vocabulary": vocab[:6],
+            "topic": tema,
+            "level": nivel,
+            "tips": tips,
+            "is_help_response": True
         }
     
-    def _generar_pregunta(self, nivel: str) -> str:
-        """Generar pregunta contextual"""
-        preguntas = {
+    def _generar_pregunta_seguimiento(self, tema: str, nivel: str):
+        """Generar pregunta de seguimiento"""
+        preguntas_por_tema = {
+            "daily routine": {
+                "beginner": "What time do you usually wake up?",
+                "intermediate": "Describe your typical morning routine.",
+                "advanced": "How has your daily routine evolved over the years?"
+            },
+            "family": {
+                "beginner": "Do you have any brothers or sisters?",
+                "intermediate": "What activities do you enjoy doing with your family?",
+                "advanced": "How have family dynamics changed in modern society?"
+            },
+            "hobbies": {
+                "beginner": "What do you like to do in your free time?",
+                "intermediate": "How did you develop your interest in your favorite hobby?",
+                "advanced": "How do hobbies contribute to personal development?"
+            },
+            "food": {
+                "beginner": "What is your favorite food?",
+                "intermediate": "Describe the last meal you really enjoyed.",
+                "advanced": "How does food culture reflect a society's values?"
+            }
+        }
+        
+        if tema in preguntas_por_tema and nivel in preguntas_por_tema[tema]:
+            return preguntas_por_tema[tema][nivel]
+        
+        # Preguntas genéricas por nivel
+        preguntas_genericas = {
             "beginner": [
                 "What is your name and where are you from?",
-                "Do you have any brothers or sisters?",
-                "What is your favorite food?",
-                "What time do you wake up?",
-                "What is your favorite color?",
                 "Do you have any pets?",
-                "What do you like to do on weekends?",
-                "What is your favorite subject in school?"
+                "What is your favorite color?",
+                "What do you like to do on weekends?"
             ],
             "intermediate": [
-                "What does your typical day look like?",
-                "Describe your best friend.",
-                "What are your hobbies and why do you enjoy them?",
-                "What was the last movie you watched?",
                 "What are your plans for next weekend?",
                 "Describe your hometown.",
                 "What skill would you like to learn?",
@@ -903,47 +907,11 @@ class SistemaCoach:
                 "What are your goals for the next 5 years?",
                 "How has technology changed education?",
                 "What global issue concerns you most?",
-                "Describe a challenge you've overcome.",
-                "What does success mean to you?",
-                "How important is learning English today?",
-                "What cultural tradition do you value?",
-                "How do you handle stress?"
+                "What does success mean to you?"
             ]
         }
         
-        questions = preguntas.get(nivel, preguntas["beginner"])
-        return random.choice(questions)
-    
-    def _generar_ejemplos(self, nivel: str):
-        """Generar ejemplos de respuesta"""
-        ejemplos = {
-            "beginner": [
-                "My name is Carlos and I'm from Mexico City.",
-                "I have one brother and two sisters.",
-                "My favorite food is pizza because it's delicious.",
-                "I wake up at 7 AM every day.",
-                "My favorite color is blue because it's calm."
-            ],
-            "intermediate": [
-                "On a typical day, I wake up at 6, go to school, study in the afternoon, and relax in the evening.",
-                "My best friend is Ana. She's very funny and always supports me.",
-                "I enjoy playing soccer because it helps me stay active and make friends.",
-                "The last movie I watched was Spider-Man. I liked the special effects.",
-                "Next weekend, I'm planning to visit my grandparents."
-            ],
-            "advanced": [
-                "In the next 5 years, I hope to finish university and start my engineering career.",
-                "Technology has made education more accessible through online resources.",
-                "Climate change concerns me most because it affects our planet's future.",
-                "A challenge I overcame was learning English, which taught me persistence.",
-                "Success to me means achieving personal growth while helping others."
-            ]
-        }
-        
-        examples = ejemplos.get(nivel, ejemplos["beginner"])
-        if len(examples) > 3:
-            return random.sample(examples, 3)
-        return examples
+        return random.choice(preguntas_genericas.get(nivel, preguntas_genericas["beginner"]))
     
     def _generate_example_for_topic(self, topic: str, nivel: str) -> str:
         """Generar ejemplo para un tema específico"""
@@ -962,14 +930,17 @@ class SistemaCoach:
                 "beginner": "I like to play soccer and watch movies.",
                 "intermediate": "In my free time, I enjoy reading novels and playing guitar, which helps me relax and be creative.",
                 "advanced": "My hobbies, particularly reading and music, serve as both creative outlets and opportunities for continuous learning."
+            },
+            "general": {
+                "beginner": "I enjoy learning English because it helps me communicate with people.",
+                "intermediate": "Learning English has opened many opportunities for me to connect with different cultures.",
+                "advanced": "Mastering English has been instrumental in broadening my global perspective and professional opportunities."
             }
         }
         
-        # Obtener ejemplo para el tema y nivel, o uno genérico
         if topic in examples_by_topic and nivel in examples_by_topic[topic]:
             return examples_by_topic[topic][nivel]
         
-        # Ejemplo genérico por nivel
         generic_examples = {
             "beginner": f"I like {topic} because it's interesting.",
             "intermediate": f"I enjoy {topic} as it allows me to learn new things and have fun.",
@@ -977,56 +948,38 @@ class SistemaCoach:
         }
         
         return generic_examples.get(nivel, f"I find {topic} very interesting.")
-
-coach = SistemaCoach()
-
-# ============================================
-# JUEGO DE VOCABULARIO
-# ============================================
-class VocabularyGame:
-    def __init__(self):
-        self.vocabulary = {
-            "easy": ["house", "dog", "cat", "sun", "water", "food", "friend", "family"],
-            "normal": ["I like music", "I have a dog", "Today is sunny", "My family is important"],
-            "hard": ["Technology changes our lives", "Education is important", "Practice makes perfect"]
-        }
     
-    def get_random_word(self, difficulty: str):
-        if difficulty not in self.vocabulary:
-            difficulty = "easy"
-        
-        word = random.choice(self.vocabulary[difficulty])
-        
-        return {
-            "word": word,
-            "difficulty": difficulty,
-            "points_base": {"easy": 10, "normal": 20, "hard": 30}[difficulty]
+    def _get_scaffolding_tips(self, nivel: str):
+        """Consejos específicos por nivel"""
+        tips = {
+            "beginner": [
+                "Speak slowly and clearly",
+                "Use simple sentences",
+                "Don't worry about mistakes"
+            ],
+            "intermediate": [
+                "Try using connecting words",
+                "Add details to your answers",
+                "Focus on pronunciation of difficult words"
+            ],
+            "advanced": [
+                "Use complex sentence structures",
+                "Incorporate idiomatic expressions",
+                "Focus on intonation and rhythm"
+            ]
         }
+        return tips.get(nivel, tips["beginner"])
     
-    def validate_answer(self, original: str, user_answer: str, difficulty: str):
-        user_clean = user_answer.strip().lower()
+    def _calcular_xp(self, score: float, word_count: int) -> int:
+        """Calcular XP ganado"""
+        base_xp = 10
+        score_bonus = int(score / 10)
+        length_bonus = min(word_count, 10)
         
-        # Detectar idioma
-        lang, _ = translator.detect_language(user_answer)
-        
-        # Para easy y normal, esperamos español
-        if difficulty in ["easy", "normal"] and lang == 'en':
-            return {
-                "is_correct": False,
-                "points_earned": 5,
-                "message": "You spoke in English! Try saying it in Spanish. 🎯"
-            }
-        
-        # Comparación simple
-        is_correct = user_clean == original.lower()
-        
-        return {
-            "is_correct": is_correct,
-            "points_earned": {"easy": 10, "normal": 20, "hard": 30}[difficulty] if is_correct else 5,
-            "message": "Correct! 🎉" if is_correct else "Try again! 💪"
-        }
+        total_xp = base_xp + score_bonus + length_bonus
+        return min(total_xp, 30)  # Máximo 30 XP por respuesta
 
-game = VocabularyGame()
+coach_unificado = SistemaCoachUnificado()
 
 # ============================================
 # PROCESADOR DE AUDIO
@@ -1039,14 +992,11 @@ class AudioProcessor:
             if len(audio_bytes) > app.config['AUDIO_FILE_MAX_SIZE']:
                 raise ValueError(f"Audio too large (max {app.config['AUDIO_FILE_MAX_SIZE']/1024/1024}MB)")
             
-            # Convertir a AudioSegment
             audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
             duration = len(audio) / 1000.0
             
-            # Optimizar
             audio = audio.set_channels(1).set_frame_rate(16000)
             
-            # Exportar a WAV
             wav_buffer = io.BytesIO()
             audio.export(wav_buffer, format="wav")
             wav_buffer.seek(0)
@@ -1080,10 +1030,11 @@ audio_processor = AudioProcessor()
 def home():
     return jsonify({
         "status": "online",
-        "service": "Eli English Tutor v5.1",
-        "version": "5.1.0",
+        "service": "Eli English Tutor v6.0 (Unificado)",
+        "version": "6.0.0",
         "timestamp": datetime.now().isoformat(),
-        "features": ["Pronunciation Analysis", "Scaffolded Learning", "Vocabulary Games"]
+        "architecture": "Backend-only intelligence",
+        "features": ["Unified Processing", "Smart Scaffolding", "Complete Analysis", "Games"]
     })
 
 @app.route('/api/health', methods=['GET'])
@@ -1092,9 +1043,137 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "sessions_active": len(session_manager.sessions),
-        "translator": "hybrid"
+        "coach": "unified",
+        "games_available": True
     })
 
+# ============================================
+# ENDPOINT PRINCIPAL UNIFICADO
+# ============================================
+@app.route('/api/process-audio', methods=['POST'])
+def process_audio_unified():
+    """
+    ENDPOINT PRINCIPAL - TODO se procesa aquí
+    
+    Flutter solo envía audio y recibe respuesta completa
+    """
+    try:
+        # Validar audio
+        if 'audio' not in request.files:
+            return jsonify({
+                "status": "error",
+                "message": "No audio file provided",
+                "type": "no_audio"
+            }), 400
+        
+        audio_file = request.files['audio']
+        session_id = request.form.get('session_id', '')
+        user_id = request.form.get('user_id', 'default_user')
+        current_question = request.form.get('current_question', '')
+        
+        logger.info(f"🔊 Processing audio - Session: {session_id}, Question: {current_question[:50]}...")
+        
+        # 1. Procesar audio
+        wav_buffer, duration = audio_processor.process_audio(audio_file)
+        transcription = audio_processor.transcribe_audio(wav_buffer)
+        
+        # 2. Obtener o crear sesión
+        session = session_manager.get_session(session_id)
+        if not session:
+            session = session_manager.create_session(user_id)
+        
+        # Actualizar pregunta actual si se proporciona
+        if current_question:
+            session.last_question = current_question
+        
+        # 3. Si no hay transcripción, usar respuesta especial
+        if not transcription or len(transcription.strip()) < 2:
+            logger.info("No speech detected")
+            response = coach_unificado._respuesta_sin_audio()
+            
+            return jsonify({
+                "status": "success",
+                "data": response
+            })
+        
+        logger.info(f"Transcription: {transcription}")
+        
+        # 4. PROCESAR CON EL COACH UNIFICADO
+        session_data = session.to_dict()
+        response = coach_unificado.procesar_mensaje_completo(
+            texto_usuario=transcription,
+            duracion_audio=duration,
+            last_question=session.last_question,
+            session_data=session_data
+        )
+        
+        # 5. Actualizar sesión con los resultados
+        session.add_conversation(
+            transcription,
+            response["message"],
+            response["pronunciation_score"]
+        )
+        session.xp += response["xp_earned"]
+        session.update_level()
+        
+        # Actualizar tema si se detectó
+        if "detected_topic" in response:
+            session.current_topic = response["detected_topic"]
+        
+        # Actualizar necesidad de scaffolding
+        session.needs_scaffolding = response.get("needs_scaffolding", False)
+        
+        # Actualizar última pregunta si hay nueva
+        if response.get("next_question"):
+            session.last_question = response["next_question"]
+        
+        # 6. Preparar respuesta final para Flutter
+        final_response = {
+            "status": "success",
+            "data": {
+                **response,
+                "session_info": {
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "current_level": session.current_level,
+                    "xp": session.xp,
+                    "xp_earned": response["xp_earned"],
+                    "total_xp": session.xp,
+                    "conversation_count": len(session.conversation_history),
+                    "current_topic": session.current_topic,
+                    "needs_scaffolding": session.needs_scaffolding,
+                    "last_question": session.last_question
+                },
+                "transcription": transcription,
+                "duration": round(duration, 2),
+                "audio_processed": True,
+                "response_timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        logger.info(f"✅ Processing complete - Score: {response['pronunciation_score']}, XP: {response['xp_earned']}, Type: {response['type']}")
+        
+        return jsonify(final_response)
+        
+    except ValueError as e:
+        logger.error(f"File too large: {e}")
+        return jsonify({
+            "status": "error",
+            "message": "Audio file too large (max 5MB)",
+            "type": "file_too_large"
+        }), 413
+    except Exception as e:
+        logger.error(f"❌ Error in unified endpoint: {str(e)[:200]}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "status": "error",
+            "message": "Internal server error",
+            "type": "server_error"
+        }), 500
+
+# ============================================
+# ENDPOINTS COMPLEMENTARIOS (para Flutter)
+# ============================================
 @app.route('/api/sesion/iniciar', methods=['POST'])
 def iniciar_sesion():
     try:
@@ -1108,101 +1187,122 @@ def iniciar_sesion():
             "user_id": user_id,
             "session_id": session.session_id,
             "welcome_message": "🎯 Welcome to Eli! Let's practice English!",
-            "initial_level": session.current_level
+            "initial_level": session.current_level,
+            "session_info": session.to_dict()
         })
     except Exception as e:
         return jsonify({"estado": "error", "mensaje": str(e)[:100]}), 500
 
-@app.route('/api/conversar_audio', methods=['POST'])
-def conversar_audio():
-    if 'audio' not in request.files:
-        return jsonify({"estado": "error", "respuesta": "No audio file"}), 400
-    
-    audio_file = request.files['audio']
-    session_id = request.form.get('session_id', '')
-    
+@app.route('/api/get-question', methods=['POST'])
+def get_question():
+    """Obtener pregunta para el usuario"""
     try:
-        # Procesar audio
-        wav_buffer, duracion = audio_processor.process_audio(audio_file)
+        data = request.json or {}
+        session_id = data.get('session_id', '')
+        topic = data.get('topic', '')
         
-        # Transcribir
-        texto = audio_processor.transcribe_audio(wav_buffer)
-        
-        if not texto:
-            return jsonify({
-                "estado": "error",
-                "respuesta": coach._respuesta_sin_audio()["respuesta"]
-            }), 400
-        
-        logger.info(f"User said: '{texto[:50]}...' ({duracion:.1f}s)")
-        
-        # Obtener respuesta
-        respuesta = coach.generar_respuesta(texto, duracion)
-        
-        # Actualizar sesión
-        xp_earned = 15
+        level = "beginner"
         if session_id:
             session = session_manager.get_session(session_id)
             if session:
-                session.add_conversation(texto, respuesta["respuesta"], respuesta["pronunciation_score"])
-                session.xp += xp_earned
-                session.update_level()
+                level = session.current_level
+                if topic:
+                    session.current_topic = topic
+        
+        # Usar el coach unificado para generar pregunta
+        question = coach_unificado._generar_pregunta_seguimiento(
+            topic if topic else "general", 
+            level
+        )
+        
+        # Actualizar sesión
+        if session_id:
+            session = session_manager.get_session(session_id)
+            if session:
+                session.last_question = question
         
         return jsonify({
-            "estado": "exito",
-            "respuesta": respuesta["respuesta"],
-            "transcripcion": texto,
-            "nueva_pregunta": respuesta.get("next_question", ""),
-            "nivel_detectado": respuesta["nivel_detectado"],
-            "pronunciation_score": respuesta["pronunciation_score"],
-            "session_id": session_id,
-            "xp_earned": xp_earned,
-            "audio_duration": duracion,
-            "tipo_respuesta": respuesta.get("tipo", "conversacion")
+            "status": "success",
+            "data": {
+                "question": question,
+                "topic": topic if topic else "general",
+                "level": level,
+                "difficulty": {"beginner": "easy", "intermediate": "medium", "advanced": "hard"}.get(level, "easy"),
+                "session_id": session_id
+            }
         })
-    
-    except ValueError as e:
-        return jsonify({"estado": "error", "respuesta": "Audio file too large (max 5MB)"}), 413
-    except Exception as e:
-        logger.error(f"Error: {str(e)[:100]}")
-        return jsonify({"estado": "error", "respuesta": "Error processing audio"}), 500
-
-@app.route('/api/juego/palabra', methods=['GET'])
-def obtener_palabra_juego():
-    try:
-        dificultad = request.args.get('dificultad', 'easy')
-        palabra_data = game.get_random_word(dificultad)
         
-        return jsonify({
-            "estado": "exito",
-            "palabra": palabra_data["word"],
-            "dificultad": palabra_data["difficulty"],
-            "puntos_base": palabra_data["points_base"]
-        })
     except Exception as e:
-        return jsonify({"estado": "error"}), 500
+        logger.error(f"Error in get-question: {str(e)[:100]}")
+        return jsonify({
+            "status": "success",
+            "data": {
+                "question": "Tell me about yourself",
+                "topic": "general",
+                "level": "beginner",
+                "difficulty": "easy",
+                "session_id": session_id if 'session_id' in locals() else ""
+            }
+        })
 
-@app.route('/api/juego/validar', methods=['POST'])
-def validar_respuesta_juego():
+@app.route('/api/get-scaffolding', methods=['POST'])
+def get_scaffolding():
+    """
+    Endpoint para cuando Flutter explícitamente pide scaffolding
+    (por ejemplo, botón de ayuda)
+    """
     try:
         data = request.json or {}
-        palabra_original = data.get('palabra_original', '')
-        respuesta_usuario = data.get('respuesta_usuario', '')
-        dificultad = data.get('dificultad', 'easy')
+        user_text = data.get('user_text', '')
+        session_id = data.get('session_id', '')
+        question = data.get('question', '')
         
-        if not palabra_original or not respuesta_usuario:
-            return jsonify({"estado": "error", "mensaje": "Missing fields"}), 400
+        # Obtener sesión
+        session = None
+        if session_id:
+            session = session_manager.get_session(session_id)
         
-        resultado = game.validate_answer(palabra_original, respuesta_usuario, dificultad)
+        # Usar el coach unificado para generar scaffolding
+        nivel = session.current_level if session else "beginner"
+        tema = coach_unificado._detectar_tema_de_pregunta(question) if question else "general"
+        
+        scaffolding_data = coach_unificado._preparar_scaffolding_data(tema, nivel, question)
+        
+        response_text = f"""## 💡 **Help with: {tema.capitalize()}**
+
+### 📝 **Use this structure:**
+\"{scaffolding_data['template']}\"
+
+### 🔤 **Vocabulary to use:**
+{', '.join(scaffolding_data['vocabulary'])}
+
+### ✨ **Example:**
+\"{scaffolding_data['examples'][0]}\"
+
+### 💡 **Tips:**
+{' • '.join(scaffolding_data['tips'])}
+
+🎤 **Now try recording your answer!**"""
         
         return jsonify({
-            "estado": "exito",
-            "es_correcta": resultado["is_correct"],
-            "puntos_obtenidos": resultado["points_earned"],
-            "mensaje": resultado["message"]
+            "status": "success",
+            "data": {
+                "type": "explicit_scaffolding",
+                "message": response_text,
+                "scaffolding_data": scaffolding_data,
+                "question": question,
+                "topic": tema,
+                "level": nivel,
+                "session_id": session_id
+            }
         })
+        
     except Exception as e:
-        return jsonify({"estado": "error"}), 500
+        logger.error(f"Error in get-scaffolding: {str(e)[:100]}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)[:100]
+        }), 500
 
 @app.route('/api/estadisticas', methods=['GET'])
 def obtener_estadisticas():
@@ -1212,14 +1312,40 @@ def obtener_estadisticas():
         if session_id:
             session = session_manager.get_session(session_id)
             if session:
-                return jsonify({"estado": "exito", "stats": session.to_dict()})
+                return jsonify({
+                    "estado": "exito", 
+                    "stats": session.to_dict(),
+                    "game_stats": session.game_stats,
+                    "recent_conversations": session.conversation_history[-5:] if session.conversation_history else []
+                })
         
         return jsonify({
             "estado": "exito",
-            "global_stats": {"total_sessions": len(session_manager.sessions)}
+            "global_stats": {
+                "total_sessions": len(session_manager.sessions),
+                "active_sessions": len([s for s in session_manager.sessions.values() 
+                                      if (datetime.now() - s.last_interaction).seconds < 3600])
+            }
         })
     except Exception as e:
-        return jsonify({"estado": "error"}), 500
+        return jsonify({"estado": "error", "mensaje": str(e)[:100]}), 500
+
+# ============================================
+# ENDPOINTS DE COMPATIBILIDAD
+# ============================================
+@app.route('/api/conversar_audio', methods=['POST'])
+def conversar_audio():
+    """Endpoint antiguo para compatibilidad"""
+    try:
+        if 'audio' not in request.files:
+            return jsonify({"estado": "error", "respuesta": "No audio file"}), 400
+        
+        # Redirigir al endpoint unificado
+        return process_audio_unified()
+    
+    except Exception as e:
+        logger.error(f"Error in conversar_audio: {str(e)[:100]}")
+        return jsonify({"estado": "error", "respuesta": "Error processing audio"}), 500
 
 # ============================================
 # EJECUCIÓN
@@ -1228,10 +1354,19 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     
     print("=" * 60)
-    print(f"🚀 Eli English Tutor v5.1")
+    print(f"🚀 Eli English Tutor v6.0 - BACKEND UNIFICADO")
     print(f"📡 Port: {port}")
-    print(f"🔧 Translator: HYBRID")
-    print(f"🎯 Coach: IMPROVED WITH SCAFFOLDING")
+    print(f"🎯 TODO la inteligencia está aquí")
+    print(f"📱 Flutter solo muestra respuestas")
+    print("=" * 60)
+    print()
+    print("✅ ENDPOINTS DISPONIBLES:")
+    print("POST /api/process-audio          - Procesa audio (PRINCIPAL)")
+    print("POST /api/get-question           - Obtiene pregunta")
+    print("POST /api/get-scaffolding        - Ayuda explícita")
+    print("POST /api/sesion/iniciar         - Inicia sesión")
+    print("GET  /api/estadisticas           - Estadísticas")
+    print("GET  /api/health                 - Health check")
     print("=" * 60)
     
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
