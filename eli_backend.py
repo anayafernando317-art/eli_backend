@@ -13,6 +13,8 @@ import time
 from datetime import datetime, timedelta
 import json
 import re
+from pathlib import Path
+import hashlib
 
 # ============================================
 # CONFIGURACIÓN INICIAL
@@ -25,8 +27,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 print("=" * 60)
-print("🚀 Eli English Tutor - Backend COMPLETO v8.0")
-print("🎯 Con juegos, scaffolding, español TODO")
+print("🚀 Eli English Tutor - Backend INTELIGENTE v11.0")
+print("🎯 Con GENERACIÓN DINÁMICA COMPLETA")
 print("=" * 60)
 
 class Config:
@@ -46,766 +48,652 @@ CORS(app, resources={
 })
 
 # ============================================
-# SISTEMA DE SESIONES
+# GENERADOR DE CONTENIDO INTELIGENTE
 # ============================================
-class UserSession:
-    def __init__(self, user_id: str, session_id: str):
-        self.user_id = user_id
-        self.session_id = session_id
-        self.current_level = "beginner"
-        self.conversation_history = []
-        self.game_stats = {
-            "total_points": 0,
-            "games_played": 0,
-            "correct_answers": 0,
-            "total_attempts": 0,
-            "vocabulary_games": 0,
-            "pronunciation_games": 0
-        }
-        self.xp = 0
-        self.level = 1
-        self.created_at = datetime.now()
-        self.last_interaction = datetime.now()
-        self.pronunciation_scores = []
-        self.game_history = []
-        self.current_question = "Tell me about yourself"
-        self.current_topic = "general"
-        self.needs_scaffolding = False
+class DynamicContentGenerator:
+    """Genera TODO el contenido dinámicamente"""
     
-    def add_conversation(self, user_text: str, eli_response: str, score: float):
-        self.conversation_history.append({
-            "user": user_text[:100],
-            "eli": eli_response[:500],
-            "score": score,
-            "timestamp": datetime.now().isoformat()
-        })
-        self.pronunciation_scores.append(score)
-        
-        if len(self.conversation_history) > 20:
-            self.conversation_history.pop(0)
-        if len(self.pronunciation_scores) > 10:
-            self.pronunciation_scores.pop(0)
-    
-    def add_game_result(self, game_type: str, correct: bool, points: int):
-        self.game_history.append({
-            "game_type": game_type,
-            "correct": correct,
-            "points": points,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        self.game_stats["games_played"] += 1
-        self.game_stats["total_points"] += points
-        
-        if game_type == "vocabulary":
-            self.game_stats["vocabulary_games"] += 1
-        elif game_type == "pronunciation":
-            self.game_stats["pronunciation_games"] += 1
-        
-        if correct:
-            self.game_stats["correct_answers"] += 1
-            self.xp += points
-        
-        self.game_stats["total_attempts"] += 1
-        
-        if len(self.game_history) > 50:
-            self.game_history.pop(0)
-    
-    def update_level(self):
-        if not self.pronunciation_scores:
-            return
-        
-        avg_score = sum(self.pronunciation_scores) / len(self.pronunciation_scores)
-        
-        if avg_score >= 80:
-            self.current_level = "advanced"
-        elif avg_score >= 60:
-            self.current_level = "intermediate"
-        else:
-            self.current_level = "beginner"
-    
-    def to_dict(self):
-        avg_score = sum(self.pronunciation_scores) / len(self.pronunciation_scores) if self.pronunciation_scores else 0
-        
-        return {
-            "user_id": self.user_id,
-            "session_id": self.session_id,
-            "current_level": self.current_level,
-            "xp": self.xp,
-            "level": self.level,
-            "game_stats": self.game_stats,
-            "conversation_count": len(self.conversation_history),
-            "avg_pronunciation_score": round(avg_score, 1),
-            "game_history_count": len(self.game_history),
-            "current_question": self.current_question,
-            "current_topic": self.current_topic,
-            "needs_scaffolding": self.needs_scaffolding,
-            "last_interaction": self.last_interaction.isoformat()
-        }
-
-class SessionManager:
     def __init__(self):
-        self.sessions = {}
-    
-    def create_session(self, user_id: str):
-        session_id = f"{user_id[:6]}_{int(time.time())}"
-        session = UserSession(user_id, session_id)
-        self.sessions[session_id] = session
-        return session
-    
-    def get_session(self, session_id: str):
-        session = self.sessions.get(session_id)
-        if session:
-            session.last_interaction = datetime.now()
-        return session
-
-session_manager = SessionManager()
-
-# ============================================
-# SISTEMA COACH COMPLETO (TODO EN UNO)
-# ============================================
-class SistemaCoachCompleto:
-    def __init__(self):
-        # Palabras clave para detección
-        self.help_keywords_english = [
-            'help', 'i dont know', "i don't know", 'what should i say',
-            'how do i say', 'i cant', "i can't", "i'm not sure",
-            'i need help', "i don't understand", 'what do i say',
-            'i need assistance', 'can you help', 'no idea', 'not sure',
-            'tell me what to say', 'give me an example'
-        ]
-        
-        self.help_keywords_spanish = [
-            'ayuda', 'no sé', 'no se', 'qué digo', 'cómo se dice',
-            'qué puedo decir', 'no entiendo', 'no puedo',
-            'ayúdame', 'no sé qué decir', 'qué debo decir',
-            'dime qué decir', 'dame un ejemplo', 'no tengo idea'
-        ]
-        
-        # Detección de español
-        self.spanish_indicators = [
-            'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
-            'y', 'o', 'pero', 'porque', 'cuando', 'donde', 'que',
-            'con', 'de', 'en', 'para', 'por', 'sin', 'sobre',
-            'hola', 'gracias', 'por favor', 'adiós', 'buenos',
-            'días', 'tardes', 'noches', 'perdón', 'siento'
-        ]
-        
-        # Scaffolding templates (MANTENIDOS de tu código original)
-        self.scaffolding_templates = {
-            "beginner": [
-                "My name is ______ and I like ______.",
-                "I am from ______ and I study ______.",
-                "Today is ______ and I feel ______.",
-                "I have ______ and my favorite ______ is ______.",
-                "I like to ______ because it is ______."
-            ],
-            "intermediate": [
-                "On weekends, I usually ______ because ______.",
-                "My favorite hobby is ______ since ______.",
-                "Recently, I have been ______ which makes me feel ______.",
-                "Although ______, I still ______ because ______.",
-                "When I have free time, I enjoy ______ as it helps me ______."
-            ],
-            "advanced": [
-                "From my perspective, ______ demonstrates that ______.",
-                "The implications of ______ suggest that ______.",
-                "Despite ______, it is evident that ______ consequently ______.",
-                "Throughout my experience, I have learned that ______ therefore ______.",
-                "Considering ______, one can observe that ______ which leads to ______."
-            ]
-        }
-        
-        # Vocabulario por tema (MANTENIDO)
-        self.topic_vocabulary = {
-            "daily routine": ["wake up", "get dressed", "have breakfast", "go to school", 
-                            "study", "have lunch", "do homework", "relax", "go to bed"],
-            "family": ["parents", "siblings", "grandparents", "relatives", "close",
-                      "supportive", "loving", "spend time", "traditions"],
-            "hobbies": ["reading", "sports", "music", "drawing", "cooking",
-                       "gaming", "watching movies", "collecting", "photography"],
-            "food": ["breakfast", "lunch", "dinner", "snacks", "healthy",
-                    "delicious", "restaurant", "cook", "recipe", "favorite"]
-        }
-    
-    def detectar_idioma(self, texto: str) -> dict:
-        """Detectar idioma del texto"""
-        if not texto:
-            return {"language": "unknown", "is_spanish": False, "needs_help": False}
-        
-        texto_lower = texto.lower()
-        words = re.findall(r'\b\w+\b', texto_lower)
-        
-        # Detectar español
-        spanish_count = sum(1 for word in words if word in self.spanish_indicators)
-        english_words = ['the', 'and', 'but', 'because', 'when', 'where', 'how', 'what', 'why']
-        english_count = sum(1 for word in words if word in english_words)
-        
-        # Detectar ayuda
-        help_spanish = any(keyword in texto_lower for keyword in self.help_keywords_spanish)
-        help_english = any(keyword in texto_lower for keyword in self.help_keywords_english)
-        
-        is_spanish = spanish_count > english_count or help_spanish
-        
-        return {
-            "language": "es" if is_spanish else "en",
-            "is_spanish": is_spanish,
-            "is_english": not is_spanish,
-            "needs_help": help_spanish or help_english,
-            "help_type": "spanish" if help_spanish else "english" if help_english else None
-        }
-    
-    def analizar_pronunciacion(self, texto: str, duracion: float) -> dict:
-        """Análisis de pronunciación (MANTENIDO de tu código)"""
-        if not texto:
-            return {
-                'score': 0,
-                'problem_words': [],
-                'tips': ["Try speaking for at least 2 seconds"],
-                'detected_level': "beginner",
-                'word_count': 0,
-                'duration': duracion
-            }
-        
-        palabras = texto.lower().split()
-        nivel = self.detectar_nivel_usuario(texto, duracion)
-        
-        problem_patterns = {
-            'the': 'ðə (tongue between teeth)',
-            'think': 'θɪŋk (soft "th")',
-            'this': 'ðɪs (vibrating "th")',
-            'very': 'vɛri (bite lower lip)',
-            'water': 'wɔːtər (pronounce the "t")'
-        }
-        
-        problem_words = []
-        for palabra in palabras[:5]:
-            clean = re.sub(r'[^\w]', '', palabra)
-            if clean in problem_patterns:
-                problem_words.append({
-                    'word': clean,
-                    'explanation': problem_patterns[clean]
-                })
-        
-        score = 65.0
-        
-        if duracion >= 2.0:
-            score += 10
-        if len(palabras) >= 5:
-            score += 5
-        
-        if problem_words:
-            score -= len(problem_words) * 5
-        
-        if nivel == "intermediate":
-            score += 5
-        elif nivel == "advanced":
-            score += 10
-        
-        score = max(30.0, min(98.0, score))
-        
-        tips = []
-        if nivel == "beginner":
-            if len(palabras) < 3:
-                tips.append("Try to form longer sentences (minimum 3 words)")
-            if duracion < 1.5:
-                tips.append("Speak for at least 2 seconds to practice rhythm")
-        
-        elif nivel == "intermediate":
-            if not problem_words and len(palabras) > 5:
-                tips.append("Great! Now try using connecting words")
-        
-        if problem_words:
-            tips.append(f"Practice: {', '.join(pw['word'] for pw in problem_words[:2])}")
-        
-        return {
-            'score': round(score, 1),
-            'problem_words': problem_words[:2],
-            'tips': tips[:3],
-            'detected_level': nivel,
-            'word_count': len(palabras),
-            'duration': round(duracion, 1)
-        }
-    
-    def detectar_nivel_usuario(self, texto: str, duracion_audio: float) -> str:
-        """Detectar nivel del usuario (MANTENIDO)"""
-        if not texto or len(texto.strip()) < 3:
-            return "beginner"
-        
-        palabras = texto.split()
-        word_count = len(palabras)
-        
-        advanced_words = {'although', 'however', 'therefore', 'furthermore', 
-                         'meanwhile', 'consequently', 'nevertheless'}
-        
-        advanced_count = sum(1 for word in palabras if word.lower() in advanced_words)
-        
-        score = 0
-        if word_count > 10: score += 3
-        elif word_count > 5: score += 2
-        elif word_count > 2: score += 1
-        
-        score += advanced_count * 2
-        
-        if score >= 6: return "advanced"
-        elif score >= 3: return "intermediate"
-        return "beginner"
-    
-    def generar_respuesta_spanish(self, texto_espanol: str) -> dict:
-        """Respuesta cuando hablan en español"""
-        # Traducciones básicas
-        translations = {
-            'hola': 'hello',
-            'no sé': "I don't know",
-            'ayuda': 'help',
-            'cómo se dice': 'how do you say',
-            'qué digo': 'what should I say',
-            'me llamo': 'my name is',
-            'soy de': 'I am from',
-            'tengo': 'I have',
-            'me gusta': 'I like',
-            'no entiendo': "I don't understand"
-        }
-        
-        # Buscar traducciones
-        translated = []
-        for esp, eng in translations.items():
-            if esp in texto_espanol.lower():
-                translated.append(eng)
-        
-        english_version = " ".join(translated) if translated else "I need help with English"
-        
-        response = f"""🌐 **¡Noté que hablaste en español! ¡Excelente!**
-
-🇪🇸 **En español dijiste:** "{texto_espanol}"
-🇺🇸 **En inglés sería:** "{english_version}"
-
-🎯 **Ahora intenta decirlo en inglés:**
-1. Escucha la versión en inglés
-2. Repite palabra por palabra
-3. Enfócate en la pronunciación
-4. Pon todo junto
-
-💡 **Consejo:** No traduzcas palabra por palabra. ¡Piensa en el mensaje!
-
-🔁 **Para practicar:** "{english_version}"
-
-🌟 **Recuerda:** Cada vez que practicas en inglés, mejoras. ¡Tú puedes! 💪"""
-        
-        return {
-            "type": "language_switch",
-            "message": response,
-            "pronunciation_score": 40,
-            "detected_level": "beginner",
-            "needs_scaffolding": True,
-            "scaffolding_data": {
-                "template": english_version,
-                "examples": [english_version],
-                "vocabulary": ["practice", "speak", "english", "slowly"],
-                "topic": "translation_practice",
-                "level": "beginner",
-                "tips": ["Think in English, don't translate", "Speak slowly", "Focus on key words"]
-            },
-            "next_question": "Can you say that in English now?",
-            "detected_language": "es",
-            "xp_earned": 5
-        }
-    
-    def generar_respuesta_normal(self, texto: str, analisis: dict, current_question: str) -> dict:
-        """Generar respuesta normal en inglés"""
-        motivational = {
-            "beginner": "🎉 **Great effort!** You're making progress!",
-            "intermediate": "🌟 **Well done!** Your English is improving!",
-            "advanced": "💫 **Excellent!** Very impressive English!"
-        }
-        
-        nivel = analisis['detected_level']
-        
-        response_parts = []
-        response_parts.append(motivational.get(nivel, "🎉 Good job!"))
-        response_parts.append(f"🗣️ **You said:** \"{texto}\"")
-        response_parts.append(f"📊 **Pronunciation Score:** {analisis['score']}/100")
-        
-        if analisis['problem_words']:
-            response_parts.append("\n🎯 **Focus on:**")
-            for pw in analisis['problem_words']:
-                response_parts.append(f"• **{pw['word']}**: {pw['explanation']}")
-        
-        if analisis['tips']:
-            response_parts.append("\n💡 **Tips:**")
-            for tip in analisis['tips']:
-                response_parts.append(f"• {tip}")
-        
-        # Detectar tema para siguiente pregunta
-        tema = self.detectar_tema(texto, current_question)
-        next_q = self.generar_pregunta_siguiente(tema, nivel)
-        
-        response_parts.append(f"\n💬 **Next question:** {next_q}")
-        
-        # Scaffolding si es necesario
-        needs_scaffolding = analisis['score'] < 60 or analisis['word_count'] < 3
-        scaffolding_data = None
-        
-        if needs_scaffolding:
-            scaffolding_data = self.generar_scaffolding_data(tema, nivel, current_question)
-        
-        return {
-            "type": "conversation_response",
-            "message": "\n".join(response_parts),
-            "pronunciation_score": analisis['score'],
-            "detected_level": nivel,
-            "needs_scaffolding": needs_scaffolding,
-            "scaffolding_data": scaffolding_data,
-            "next_question": next_q,
-            "detected_topic": tema,
-            "detected_language": "en",
-            "xp_earned": self.calcular_xp(analisis['score'], analisis['word_count'])
-        }
-    
-    def generar_respuesta_ayuda(self, texto: str, es_spanish: bool, current_question: str) -> dict:
-        """Generar respuesta de ayuda"""
-        nivel = "beginner"
-        tema = self.detectar_tema("", current_question)
-        template = random.choice(self.scaffolding_templates[nivel])
-        
-        if es_spanish:
-            message = f"""🆘 **¡Te ayudo a responder en inglés!**
-
-❓ **Pregunta:** {current_question}
-
-📝 **Usa esta estructura:**
-"{template}"
-
-🔤 **Vocabulario útil:**
-name, like, from, have, enjoy, because
-
-💡 **Ejemplo:**
-"My name is Carlos and I like to practice English."
-
-🎤 **¡Ahora inténtalo tú!**
-1. Llena los espacios en blanco
-2. Grábalo
-3. Te daré retroalimentación
-
-🌟 **Recuerda:** ¡Todos empezamos así! 💪"""
-        else:
-            message = f"""🆘 **I'll help you structure your answer!**
-
-❓ **Question:** {current_question}
-
-📝 **Use this structure:**
-"{template}"
-
-🔤 **Useful vocabulary:**
-name, like, from, have, enjoy, because
-
-💡 **Example:**
-"My name is Alex and I enjoy learning new things."
-
-🎤 **Now try:**
-1. Fill in the blanks
-2. Record your answer
-3. I'll give you personalized feedback
-
-🌟 **Remember:** It's okay to make mistakes. That's how we learn! 💪"""
-        
-        return {
-            "type": "help_response",
-            "message": message,
-            "pronunciation_score": 0,
-            "detected_level": nivel,
-            "needs_scaffolding": True,
-            "scaffolding_data": {
-                "template": template,
-                "examples": [f"My name is... and I {random.choice(['like', 'enjoy', 'love'])}..."],
-                "vocabulary": ["name", "like", "from", "have", "enjoy", "because"],
-                "topic": tema,
-                "level": nivel,
-                "tips": ["Speak slowly", "Use the vocabulary", "Add personal details"],
-                "current_question": current_question
-            },
-            "next_question": current_question,  # ¡MANTENER misma pregunta!
-            "detected_topic": tema,
-            "detected_language": "es" if es_spanish else "en",
-            "xp_earned": 10,
-            "is_help_response": True
-        }
-    
-    def detectar_tema(self, texto: str, current_question: str) -> str:
-        """Detectar tema"""
-        combined = (texto + " " + current_question).lower()
-        
-        if "family" in combined or "parents" in combined or "brother" in combined or "sister" in combined:
-            return "family"
-        elif "hobby" in combined or "free time" in combined or "like to do" in combined:
-            return "hobbies"
-        elif "food" in combined or "eat" in combined or "restaurant" in combined:
-            return "food"
-        elif "routine" in combined or "day" in combined or "morning" in combined:
-            return "daily routine"
-        elif "name" in combined and ("where" in combined or "from" in combined):
-            return "introduction"
-        else:
-            return "general"
-    
-    def generar_pregunta_siguiente(self, tema: str, nivel: str) -> str:
-        """Generar siguiente pregunta"""
-        preguntas = {
-            "family": {
-                "beginner": "Do you have any brothers or sisters?",
-                "intermediate": "What activities do you enjoy with your family?",
-                "advanced": "How has your family influenced you?"
-            },
-            "hobbies": {
-                "beginner": "What do you like to do in your free time?",
-                "intermediate": "How did you get interested in your hobby?",
-                "advanced": "How does your hobby contribute to your personal growth?"
-            },
-            "general": {
-                "beginner": "What is your favorite color?",
-                "intermediate": "Describe your hometown.",
-                "advanced": "What are your future goals?"
-            }
-        }
-        
-        tema_preguntas = preguntas.get(tema, preguntas["general"])
-        return tema_preguntas.get(nivel, tema_preguntas["beginner"])
-    
-    def generar_scaffolding_data(self, tema: str, nivel: str, current_question: str) -> dict:
-        """Generar datos de scaffolding"""
-        template = random.choice(self.scaffolding_templates.get(nivel, self.scaffolding_templates["beginner"]))
-        vocab = self.topic_vocabulary.get(tema, ["words", "phrases", "sentences"])
-        
-        return {
-            "template": template,
-            "examples": [f"Example: {template.replace('______', 'something')}"],
-            "vocabulary": vocab[:6],
-            "topic": tema,
-            "level": nivel,
-            "tips": ["Speak clearly", "Take your time", "Focus on communication"],
-            "current_question": current_question
-        }
-    
-    def calcular_xp(self, score: float, word_count: int) -> int:
-        """Calcular XP"""
-        base_xp = 10
-        score_bonus = int(score / 10)
-        length_bonus = min(word_count, 10)
-        return min(base_xp + score_bonus + length_bonus, 30)
-
-coach = SistemaCoachCompleto()
-
-# ============================================
-# SISTEMA DE JUEGOS (COMPLETO - MANTENIDO)
-# ============================================
-class VocabularyGame:
-    def __init__(self):
-        # Categorías de vocabulario por nivel (MANTENIDO)
-        self.categories = {
+        # BANCOS DE PALABRAS POR TIEMPO VERBAL Y DIFICULTAD
+        self.word_banks = {
             "beginner": {
-                "food": ["apple", "bread", "water", "rice", "milk", "egg", "meat", "fruit"],
-                "family": ["mother", "father", "sister", "brother", "family", "home", "love"],
-                "animals": ["dog", "cat", "bird", "fish", "horse", "cow", "rabbit"],
-                "colors": ["red", "blue", "green", "yellow", "black", "white", "orange"],
-                "numbers": ["one", "two", "three", "four", "five", "six", "seven", "eight"]
+                "present": {
+                    "verbs": ["eat", "drink", "sleep", "study", "work", "play", "read", "write"],
+                    "nouns": ["food", "water", "book", "school", "home", "friend", "family"],
+                    "adjectives": ["good", "bad", "happy", "sad", "tired", "hungry"]
+                },
+                "past": {
+                    "verbs": ["ate", "drank", "slept", "studied", "worked", "played", "read", "wrote"],
+                    "time_words": ["yesterday", "last week", "this morning", "last night"],
+                    "connectors": ["then", "after that", "later"]
+                },
+                "future": {
+                    "verbs": ["will eat", "will drink", "will study", "will work", "will play"],
+                    "time_words": ["tomorrow", "next week", "soon", "later"],
+                    "plans": ["plan to", "want to", "hope to"]
+                }
             },
             "intermediate": {
-                "daily routine": ["wake up", "get dressed", "have breakfast", "go to work", "exercise", "relax"],
-                "hobbies": ["reading", "sports", "music", "cooking", "painting", "dancing", "photography"],
-                "travel": ["airport", "hotel", "passport", "suitcase", "ticket", "destination", "journey"],
-                "school": ["teacher", "student", "classroom", "homework", "exam", "project", "knowledge"],
-                "weather": ["sunny", "rainy", "cloudy", "windy", "storm", "temperature", "forecast"]
+                "present": {
+                    "verbs": ["analyze", "discuss", "explore", "create", "develop", "manage"],
+                    "nouns": ["project", "meeting", "presentation", "research", "analysis"],
+                    "adjectives": ["challenging", "interesting", "complex", "valuable"]
+                },
+                "past": {
+                    "verbs": ["accomplished", "achieved", "completed", "experienced", "overcame"],
+                    "time_words": ["previously", "formerly", "in the past", "earlier"],
+                    "connectors": ["consequently", "as a result", "therefore"]
+                },
+                "future": {
+                    "verbs": ["will achieve", "will complete", "will implement", "will establish"],
+                    "time_words": ["in the future", "eventually", "down the road"],
+                    "plans": ["aim to", "intend to", "aspire to"]
+                },
+                "present_perfect": {
+                    "verbs": ["have learned", "have improved", "have developed", "have gained"],
+                    "experiences": ["experience", "knowledge", "skills", "understanding"]
+                },
+                "past_continuous": {
+                    "verbs": ["was studying", "were working", "was practicing", "were discussing"],
+                    "time_words": ["while", "when", "during", "at that time"]
+                }
             },
             "advanced": {
-                "technology": ["software", "hardware", "algorithm", "database", "network", "interface", "protocol"],
-                "business": ["strategy", "management", "marketing", "finance", "investment", "entrepreneur"],
-                "science": ["research", "experiment", "hypothesis", "analysis", "discovery", "innovation"],
-                "politics": ["government", "democracy", "economy", "policy", "election", "diplomacy"],
-                "education": ["pedagogy", "curriculum", "assessment", "literacy", "cognitive", "development"]
+                "present": {
+                    "verbs": ["scrutinize", "deconstruct", "conceptualize", "orchestrate", "pioneer"],
+                    "nouns": ["methodology", "framework", "paradigm", "infrastructure"],
+                    "adjectives": ["sophisticated", "cutting-edge", "groundbreaking", "innovative"]
+                },
+                "past_perfect": {
+                    "verbs": ["had mastered", "had pioneered", "had revolutionized", "had established"],
+                    "time_words": ["by that point", "prior to", "up until then"]
+                },
+                "future_perfect": {
+                    "verbs": ["will have mastered", "will have pioneered", "will have transformed"],
+                    "time_words": ["by then", "by that time", "by the time"]
+                },
+                "conditional": {
+                    "verbs": ["would innovate", "could revolutionize", "might transform"],
+                    "hypothetical": ["provided that", "assuming that", "in the event that"]
+                },
+                "subjunctive": {
+                    "verbs": ["were to implement", "should one consider", "might one examine"],
+                    "formal": ["it is essential that", "it is crucial that", "it is imperative that"]
+                }
             }
         }
         
-        # Frases completas para práctica (MANTENIDO)
-        self.sentences = {
-            "beginner": [
-                "I like to eat apples.",
-                "My family is very important.",
-                "The dog is playing outside.",
-                "My favorite color is blue.",
-                "I have two brothers."
+        # ESTRUCTURAS DE ORACIONES POR TIEMPO VERBAL
+        self.sentence_structures = {
+            "present_simple": [
+                "I {verb} {noun} every day.",
+                "She {verb} at {place}.",
+                "They always {verb} {activity}."
             ],
-            "intermediate": [
-                "Every morning I wake up at 7 AM.",
-                "In my free time, I enjoy reading books.",
-                "Last year I traveled to Spain.",
-                "Learning English requires practice.",
-                "The weather today is sunny and warm."
+            "present_continuous": [
+                "I am {verb}ing right now.",
+                "He is {verb}ing at the moment.",
+                "We are {verb}ing together."
             ],
-            "advanced": [
-                "Technological innovation drives economic growth.",
-                "Effective communication is essential in business.",
-                "Scientific research contributes to societal progress.",
-                "Democratic principles ensure political stability.",
-                "Educational reform addresses systemic challenges."
+            "past_simple": [
+                "Yesterday, I {verb} {noun}.",
+                "Last week, she {verb} at {place}.",
+                "They {verb} {activity}."
+            ],
+            "past_continuous": [
+                "I was {verb}ing when {event}.",
+                "They were {verb}ing at {time}.",
+                "He was {verb}ing while {activity}."
+            ],
+            "future_simple": [
+                "Tomorrow, I will {verb} {noun}.",
+                "Next week, she will {verb} at {place}.",
+                "They will {verb} {activity}."
+            ],
+            "present_perfect": [
+                "I have {verb} {noun} recently.",
+                "She has {verb} since {time}.",
+                "They have {verb} many times."
+            ],
+            "past_perfect": [
+                "I had {verb} before {event}.",
+                "She had already {verb} when {event}.",
+                "They had {verb} by that time."
+            ],
+            "future_perfect": [
+                "By {time}, I will have {verb}.",
+                "She will have {verb} by tomorrow.",
+                "They will have {verb} soon."
+            ],
+            "conditional": [
+                "If I had time, I would {verb}.",
+                "She would {verb} if {condition}.",
+                "They could {verb} provided that {condition}."
             ]
         }
-    
-    def get_game_round(self, difficulty: str, category: str = None):
-        """Obtener una ronda de juego (MANTENIDO)"""
-        if difficulty not in self.categories:
-            difficulty = "beginner"
         
-        if not category or category not in self.categories[difficulty]:
-            category = random.choice(list(self.categories[difficulty].keys()))
-        
-        if random.random() > 0.5:
-            word = random.choice(self.categories[difficulty][category])
-            game_type = "word_translation"
-            points = {"beginner": 10, "intermediate": 20, "advanced": 30}[difficulty]
-            
-            return {
-                "type": game_type,
-                "content": word,
-                "category": category,
-                "difficulty": difficulty,
-                "points": points,
-                "instructions": f"Translate this word to Spanish: '{word}'",
-                "hint": f"Category: {category}"
-            }
-        else:
-            sentence = random.choice(self.sentences[difficulty])
-            game_type = "sentence_translation"
-            points = {"beginner": 15, "intermediate": 30, "advanced": 45}[difficulty]
-            
-            return {
-                "type": game_type,
-                "content": sentence,
-                "category": "sentence",
-                "difficulty": difficulty,
-                "points": points,
-                "instructions": f"Translate this sentence to Spanish: '{sentence}'",
-                "hint": "Speak clearly and pronounce each word"
-            }
-    
-    def validate_answer(self, game_data: dict, user_answer: str, session_id: str = None):
-        """Validar respuesta del juego (MANTENIDO)"""
-        original = game_data["content"].lower()
-        user_lower = user_answer.lower().strip()
-        
-        # Simulación simple de validación
-        is_correct = len(user_lower) > 2  # Si la respuesta tiene al menos 3 caracteres
-        
-        base_points = game_data["points"]
-        points_earned = base_points if is_correct else max(1, int(base_points * 0.2))
-        
-        # Actualizar sesión
-        if session_id:
-            session = session_manager.get_session(session_id)
-            if session:
-                session.add_game_result("vocabulary", is_correct, points_earned)
-        
-        if is_correct:
-            message = f"🎯 Correct! {points_earned} points!"
-        else:
-            message = f"📚 Try again! The word was: '{original}'"
-        
-        return {
-            "is_correct": is_correct,
-            "points_earned": points_earned,
-            "message": message,
-            "user_answer": user_answer,
-            "game_type": game_data["type"],
-            "difficulty": game_data["difficulty"]
-        }
-
-class PronunciationGame:
-    def __init__(self):
-        # Tongue twisters (MANTENIDO)
-        self.tongue_twisters = {
-            "beginner": [
-                "She sells seashells by the seashore.",
-                "How can a clam cram in a clean cream can?",
-                "I scream, you scream, we all scream for ice cream.",
-                "Four fine fresh fish for you.",
-                "Red lorry, yellow lorry."
+        # PLANTILLAS DE PREGUNTAS POR TIEMPO VERBAL
+        self.question_templates = {
+            "present": [
+                "What do you usually {verb}?",
+                "How often do you {verb}?",
+                "Where do you {verb}?",
+                "Why do you {verb} {noun}?"
             ],
-            "intermediate": [
-                "Peter Piper picked a peck of pickled peppers.",
-                "How much wood would a woodchuck chuck if a woodchuck could chuck wood?",
-                "Six slippery snails slid slowly seaward.",
-                "A proper copper coffee pot.",
-                "Fuzzy Wuzzy was a bear."
+            "past": [
+                "What did you {verb} yesterday?",
+                "How did you {verb} last week?",
+                "Where were you when you {verb}?",
+                "Why did you {verb} {noun}?"
             ],
-            "advanced": [
-                "The sixth sick sheik's sixth sheep's sick.",
-                "Betty Botter bought some butter but she said the butter's bitter.",
-                "I slit the sheet, the sheet I slit, and on the slitted sheet I sit.",
-                "Through three cheese trees three free fleas flew.",
-                "Lesser leather never weathered wetter weather better."
+            "future": [
+                "What will you {verb} tomorrow?",
+                "How will you {verb} next month?",
+                "Where will you {verb}?",
+                "Why will you {verb} {noun}?"
+            ],
+            "present_perfect": [
+                "What have you {verb} recently?",
+                "How long have you {verb}?",
+                "What {noun} have you {verb}?",
+                "Why have you {verb} {activity}?"
+            ],
+            "hypothetical": [
+                "What would you do if you could {verb}?",
+                "How would you {verb} if {condition}?",
+                "Where would you {verb} given the chance?",
+                "Why would you {verb} {noun}?"
             ]
         }
-    
-    def get_pronunciation_challenge(self, difficulty: str):
-        """Obtener desafío de pronunciación (MANTENIDO)"""
-        if difficulty not in self.tongue_twisters:
-            difficulty = "beginner"
         
-        twister = random.choice(self.tongue_twisters[difficulty])
-        points = {"beginner": 20, "intermediate": 40, "advanced": 60}[difficulty]
+        # CATEGORÍAS TEMÁTICAS
+        self.categories = {
+            "daily_life": ["routine", "habits", "schedule", "chores", "errands"],
+            "work_study": ["projects", "assignments", "meetings", "classes", "exams"],
+            "hobbies": ["sports", "music", "reading", "gaming", "cooking"],
+            "travel": ["destinations", "experiences", "cultures", "adventures"],
+            "personal": ["goals", "dreams", "memories", "achievements", "challenges"]
+        }
+    
+    def generate_vocabulary(self, difficulty="beginner", tense="present", category="general"):
+        """Genera palabra de vocabulario con contexto completo"""
+        
+        # Seleccionar banco según dificultad y tiempo verbal
+        if difficulty in self.word_banks and tense in self.word_banks[difficulty]:
+            bank = self.word_banks[difficulty][tense]
+        else:
+            # Fallback al banco más simple
+            bank = self.word_banks["beginner"]["present"]
+        
+        # Seleccionar tipo de palabra
+        word_type = random.choice(list(bank.keys()))
+        word = random.choice(bank[word_type])
+        
+        # Generar oración según tiempo verbal
+        sentence = self._generate_sentence(word, difficulty, tense, word_type)
+        
+        # Generar traducción
+        translation = self._generate_translation(word, sentence, tense)
+        
+        # Información gramatical
+        grammar_info = self._get_grammar_info(tense, word_type)
         
         return {
-            "type": "tongue_twister",
-            "content": twister,
+            "word": word,
+            "type": word_type,
+            "sentence": sentence,
+            "translation": translation,
+            "tense": tense,
             "difficulty": difficulty,
-            "points": points,
-            "instructions": "Repeat this tongue twister as clearly as possible:",
-            "focus": "Clarity and speed"
+            "category": category,
+            "grammar": grammar_info,
+            "is_generated": True,
+            "generated_at": datetime.now().isoformat()
         }
     
-    def validate_pronunciation(self, game_data: dict, session_id: str = None):
-        """Validar pronunciación (simplificado) (MANTENIDO)"""
-        difficulty = game_data["difficulty"]
+    def _generate_sentence(self, word, difficulty, tense, word_type):
+        """Genera oración contextualizada"""
         
-        # Simulación
-        score = random.randint(60, 95)
-        passing_threshold = {"beginner": 70, "intermediate": 75, "advanced": 80}[difficulty]
-        is_correct = score >= passing_threshold
-        
-        base_points = game_data["points"]
-        if is_correct:
-            bonus = int((score - passing_threshold) / 5) * 5
-            points_earned = base_points + bonus
-        else:
-            points_earned = max(1, int(base_points * 0.3))
-        
-        # Actualizar sesión
-        if session_id:
-            session = session_manager.get_session(session_id)
-            if session:
-                session.add_game_result("pronunciation", is_correct, points_earned)
-        
-        if is_correct:
-            if score >= 90:
-                message = f"🎤 Excellent pronunciation! {points_earned} points! (Score: {score}%)"
-            elif score >= 80:
-                message = f"🗣️ Very good! {points_earned} points! (Score: {score}%)"
+        # Determinar estructura según tiempo verbal
+        if tense == "present":
+            if "continuous" in tense:
+                structure = random.choice(self.sentence_structures.get("present_continuous", ["I am {verb}ing."]))
             else:
-                message = f"✅ Good effort! {points_earned} points! (Score: {score}%)"
+                structure = random.choice(self.sentence_structures.get("present_simple", ["I {verb}."]))
+        elif tense == "past":
+            if "continuous" in tense:
+                structure = random.choice(self.sentence_structures.get("past_continuous", ["I was {verb}ing."]))
+            else:
+                structure = random.choice(self.sentence_structures.get("past_simple", ["I {verb}."]))
+        elif tense == "future":
+            structure = random.choice(self.sentence_structures.get("future_simple", ["I will {verb}."]))
+        elif "perfect" in tense:
+            if "past" in tense:
+                structure = random.choice(self.sentence_structures.get("past_perfect", ["I had {verb}."]))
+            elif "future" in tense:
+                structure = random.choice(self.sentence_structures.get("future_perfect", ["I will have {verb}."]))
+            else:
+                structure = random.choice(self.sentence_structures.get("present_perfect", ["I have {verb}."]))
+        elif tense == "conditional":
+            structure = random.choice(self.sentence_structures.get("conditional", ["I would {verb}."]))
         else:
-            message = f"💪 Keep practicing! Focus on: {game_data.get('focus', 'clarity')}"
+            structure = "I {verb}."
+        
+        # Reemplazar marcadores
+        if word_type == "verbs":
+            sentence = structure.replace("{verb}", word)
+        elif word_type == "nouns":
+            sentence = structure.replace("{noun}", word)
+        elif word_type == "adjectives":
+            sentence = structure.replace("{adjective}", word)
+        else:
+            sentence = f"I {word}."
+        
+        # Añadir contexto adicional
+        context_words = {
+            "place": ["at home", "at school", "at work", "in the park", "at the gym"],
+            "activity": ["reading", "studying", "working", "exercising", "relaxing"],
+            "event": ["the phone rang", "it started raining", "my friend arrived"],
+            "time": ["morning", "afternoon", "evening", "night"],
+            "condition": ["I had more time", "it were possible", "circumstances allowed"]
+        }
+        
+        # Añadir contexto aleatorio
+        for marker in ["{place}", "{activity}", "{event}", "{time}", "{condition}"]:
+            if marker in sentence:
+                context_type = marker.strip("{}")
+                if context_type in context_words:
+                    sentence = sentence.replace(marker, random.choice(context_words[context_type]))
+        
+        return sentence.capitalize()
+    
+    def _generate_translation(self, word, sentence, tense):
+        """Genera traducción al español"""
+        
+        # Diccionario básico de traducciones
+        translations = {
+            # Verbos comunes
+            "eat": "comer", "drink": "beber", "sleep": "dormir", 
+            "study": "estudiar", "work": "trabajar", "play": "jugar",
+            "read": "leer", "write": "escribir",
+            
+            # Sustantivos
+            "food": "comida", "water": "agua", "book": "libro",
+            "school": "escuela", "home": "hogar", "friend": "amigo",
+            "family": "familia",
+            
+            # Adjetivos
+            "good": "bueno", "bad": "malo", "happy": "feliz",
+            "sad": "triste", "tired": "cansado", "hungry": "hambriento"
+        }
+        
+        # Traducir palabra individual
+        word_translation = translations.get(word.lower(), word)
+        
+        # Traducir oración completa (simplificado)
+        sentence_translation = sentence
+        
+        # Reemplazos básicos para tiempos verbales
+        tense_translations = {
+            "present": {"I": "Yo", "am": "estoy", "is": "está", "are": "están"},
+            "past": {"was": "estaba", "were": "estaban", "did": "hice"},
+            "future": {"will": "voy a", "will be": "estaré"},
+            "present_perfect": {"have": "he", "has": "ha"},
+            "past_perfect": {"had": "había"},
+            "conditional": {"would": "haría", "could": "podría"}
+        }
+        
+        if tense in tense_translations:
+            for eng, esp in tense_translations[tense].items():
+                sentence_translation = sentence_translation.replace(eng, esp)
         
         return {
-            "is_correct": is_correct,
-            "score": score,
-            "points_earned": points_earned,
-            "message": message,
-            "game_type": "tongue_twister",
-            "difficulty": difficulty
+            "word": word_translation,
+            "sentence": sentence_translation,
+            "tense": self._get_spanish_tense(tense)
         }
+    
+    def _get_spanish_tense(self, english_tense):
+        """Convierte tiempo verbal inglés a español"""
+        tense_map = {
+            "present_simple": "presente simple",
+            "present_continuous": "presente continuo",
+            "past_simple": "pretérito",
+            "past_continuous": "pretérito imperfecto",
+            "future_simple": "futuro simple",
+            "present_perfect": "pretérito perfecto",
+            "past_perfect": "pretérito pluscuamperfecto",
+            "future_perfect": "futuro perfecto",
+            "conditional": "condicional"
+        }
+        return tense_map.get(english_tense, english_tense)
+    
+    def _get_grammar_info(self, tense, word_type):
+        """Proporciona información gramatical"""
+        
+        grammar_explanations = {
+            "present_simple": {
+                "description": "Para hábitos y hechos generales",
+                "structure": "Sujeto + verbo (+s en 3ra persona)",
+                "example": "I work every day."
+            },
+            "past_simple": {
+                "description": "Para acciones completadas en el pasado",
+                "structure": "Sujeto + verbo en pasado (+ed o irregular)",
+                "example": "I worked yesterday."
+            },
+            "future_simple": {
+                "description": "Para decisiones espontáneas y predicciones",
+                "structure": "Sujeto + will + verbo base",
+                "example": "I will work tomorrow."
+            },
+            "present_perfect": {
+                "description": "Para experiencias y acciones con relevancia presente",
+                "structure": "Sujeto + have/has + participio pasado",
+                "example": "I have worked here for years."
+            },
+            "conditional": {
+                "description": "Para situaciones hipotéticas y cortesía",
+                "structure": "Sujeto + would + verbo base",
+                "example": "I would work if I could."
+            }
+        }
+        
+        return grammar_explanations.get(tense, {
+            "description": f"Tiempo verbal: {tense}",
+            "structure": "Consulta reglas gramaticales",
+            "example": "Ejemplo no disponible"
+        })
+    
+    def generate_question(self, difficulty="beginner", topic=None, force_tense=None):
+        """Genera pregunta dinámica"""
+        
+        # Determinar tiempo verbal
+        if force_tense:
+            tense = force_tense
+        else:
+            tenses_by_difficulty = {
+                "beginner": ["present", "past", "future"],
+                "intermediate": ["present", "past", "future", "present_perfect", "past_continuous"],
+                "advanced": ["present", "past_perfect", "future_perfect", "conditional", "subjunctive"]
+            }
+            available_tenses = tenses_by_difficulty.get(difficulty, ["present"])
+            tense = random.choice(available_tenses)
+        
+        # Seleccionar plantilla según tiempo verbal
+        if tense in self.question_templates:
+            template = random.choice(self.question_templates[tense])
+        else:
+            template = "What do you think about {topic}?"
+        
+        # Seleccionar categoría
+        if not topic:
+            topic = random.choice(list(self.categories.keys()))
+        
+        # Obtener palabras para rellenar
+        bank = self.word_banks.get(difficulty, self.word_banks["beginner"]).get(tense, {})
+        
+        if "verbs" in bank:
+            verb = random.choice(bank["verbs"])
+        else:
+            verb = random.choice(self.word_banks["beginner"]["present"]["verbs"])
+        
+        if "nouns" in bank:
+            noun = random.choice(bank["nouns"])
+        else:
+            noun = random.choice(self.word_banks["beginner"]["present"]["nouns"])
+        
+        # Rellenar plantilla
+        question = template
+        question = question.replace("{verb}", verb)
+        question = question.replace("{noun}", noun)
+        question = question.replace("{topic}", topic)
+        
+        # Añadir elementos específicos
+        if "{activity}" in question and "activities" in self.categories:
+            activity = random.choice(self.categories["hobbies"])
+            question = question.replace("{activity}", activity)
+        
+        if "{condition}" in question:
+            conditions = ["you had more time", "it were possible", "circumstances allowed"]
+            question = question.replace("{condition}", random.choice(conditions))
+        
+        # Asegurar formato correcto
+        if not question.endswith("?"):
+            question += "?"
+        
+        # Capitalizar
+        question = question[0].upper() + question[1:]
+        
+        # Generar traducción
+        translation = self._translate_question(question, tense)
+        
+        return {
+            "question": question,
+            "translation": translation,
+            "tense": tense,
+            "difficulty": difficulty,
+            "topic": topic,
+            "category": random.choice(self.categories[topic]) if topic in self.categories else "general",
+            "is_generated": True,
+            "grammar_focus": self._get_grammar_focus(tense),
+            "suggested_response": self._generate_suggested_response(question, tense, difficulty)
+        }
+    
+    def _translate_question(self, question, tense):
+        """Traduce pregunta al español"""
+        
+        # Traducciones básicas
+        translations = {
+            "What": "¿Qué",
+            "How": "¿Cómo",
+            "Where": "¿Dónde",
+            "Why": "¿Por qué",
+            "When": "¿Cuándo",
+            "Who": "¿Quién",
+            "do you": "tú",
+            "does he/she": "él/ella",
+            "did you": "tú",
+            "will you": "tú",
+            "have you": "has tú",
+            "had you": "habías tú",
+            "would you": "tú",
+            "usually": "usualmente",
+            "often": "a menudo",
+            "yesterday": "ayer",
+            "tomorrow": "mañana",
+            "last week": "la semana pasada",
+            "next month": "el próximo mes",
+            "recently": "recientemente"
+        }
+        
+        translated = question
+        for eng, esp in translations.items():
+            translated = translated.replace(eng, esp)
+        
+        # Asegurar formato español
+        if not translated.startswith("¿"):
+            translated = "¿" + translated
+        
+        return translated
+    
+    def _get_grammar_focus(self, tense):
+        """Obtiene enfoque gramatical para la pregunta"""
+        
+        focus_map = {
+            "present": "Presente simple - hábitos y rutinas",
+            "past": "Pasado simple - experiencias completadas",
+            "future": "Futuro simple - planes y predicciones",
+            "present_perfect": "Presente perfecto - experiencias recientes",
+            "past_perfect": "Pasado perfecto - acciones anteriores a otras",
+            "future_perfect": "Futuro perfecto - acciones completadas antes de un punto futuro",
+            "conditional": "Condicional - situaciones hipotéticas",
+            "subjunctive": "Subjuntivo - deseos y situaciones improbables"
+        }
+        
+        return focus_map.get(tense, "Práctica general")
+    
+    def _generate_suggested_response(self, question, tense, difficulty):
+        """Genera respuesta sugerida según la pregunta"""
+        
+        response_templates = {
+            "present": [
+                "I usually {verb} at {time}.",
+                "Normally, I {verb} {frequency}.",
+                "Typically, I {verb} because {reason}."
+            ],
+            "past": [
+                "Yesterday, I {verb} at {place}.",
+                "Last week, I {verb} with {person}.",
+                "Previously, I {verb} because {reason}."
+            ],
+            "future": [
+                "Tomorrow, I will {verb} at {time}.",
+                "Next week, I plan to {verb} at {place}.",
+                "In the future, I hope to {verb} because {reason}."
+            ]
+        }
+        
+        # Seleccionar template
+        template_group = "present"
+        for key in ["past", "future", "present"]:
+            if key in tense:
+                template_group = key
+                break
+        
+        template = random.choice(response_templates.get(template_group, ["I {verb}."]))
+        
+        # Obtener verbos apropiados
+        bank = self.word_banks.get(difficulty, self.word_banks["beginner"])
+        verbs = []
+        for tense_bank in bank.values():
+            if "verbs" in tense_bank:
+                verbs.extend(tense_bank["verbs"])
+        
+        if verbs:
+            verb = random.choice(verbs)
+        else:
+            verb = "do something"
+        
+        # Rellenar template
+        response = template.replace("{verb}", verb)
+        
+        # Añadir contexto
+        contexts = {
+            "{time}": ["morning", "afternoon", "evening"],
+            "{place}": ["home", "school", "work", "the park"],
+            "{person}": ["my friend", "my family", "a colleague"],
+            "{frequency}": ["every day", "once a week", "sometimes"],
+            "{reason}": ["it's important", "I enjoy it", "it helps me learn"]
+        }
+        
+        for placeholder, options in contexts.items():
+            if placeholder in response:
+                response = response.replace(placeholder, random.choice(options))
+        
+        return response
 
-# Inicializar juegos
-vocabulary_game = VocabularyGame()
-pronunciation_game = PronunciationGame()
+# Inicializar generador
+content_generator = DynamicContentGenerator()
+
+# ============================================
+# BASE DE DATOS SIMPLE PARA PROGRESO
+# ============================================
+class ProgressDatabase:
+    def __init__(self):
+        self.db_file = "progress_db.json"
+        self._init_db()
+    
+    def _init_db(self):
+        if not Path(self.db_file).exists():
+            with open(self.db_file, 'w') as f:
+                json.dump({
+                    "users": {},
+                    "generated_content": {
+                        "vocabulary": [],
+                        "questions": [],
+                        "sentences": []
+                    }
+                }, f, indent=2)
+    
+    def save_user_progress(self, user_id, progress_data):
+        try:
+            with open(self.db_file, 'r') as f:
+                data = json.load(f)
+            
+            if user_id not in data["users"]:
+                data["users"][user_id] = {
+                    "created": datetime.now().isoformat(),
+                    "sessions": [],
+                    "total_xp": 0,
+                    "current_level": "beginner"
+                }
+            
+            user = data["users"][user_id]
+            user["last_seen"] = datetime.now().isoformat()
+            user["total_xp"] = progress_data.get("xp", user.get("total_xp", 0))
+            user["current_level"] = progress_data.get("level", user.get("current_level", "beginner"))
+            
+            # Guardar sesión
+            session = {
+                "id": progress_data.get("session_id"),
+                "timestamp": datetime.now().isoformat(),
+                "xp_earned": progress_data.get("xp_earned", 0),
+                "questions": progress_data.get("questions", 0)
+            }
+            user["sessions"].append(session)
+            
+            # Mantener solo últimas 50 sesiones
+            if len(user["sessions"]) > 50:
+                user["sessions"] = user["sessions"][-50:]
+            
+            with open(self.db_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error saving progress: {e}")
+            return False
+    
+    def load_user_progress(self, user_id):
+        try:
+            with open(self.db_file, 'r') as f:
+                data = json.load(f)
+            
+            return data["users"].get(user_id)
+        except:
+            return None
+    
+    def save_generated_content(self, content_type, content):
+        try:
+            with open(self.db_file, 'r') as f:
+                data = json.load(f)
+            
+            if content_type not in data["generated_content"]:
+                data["generated_content"][content_type] = []
+            
+            content_entry = {
+                "id": hashlib.md5(json.dumps(content).encode()).hexdigest()[:8],
+                "content": content,
+                "created": datetime.now().isoformat(),
+                "used": 0
+            }
+            
+            data["generated_content"][content_type].append(content_entry)
+            
+            # Limitar a 1000 entradas
+            if len(data["generated_content"][content_type]) > 1000:
+                data["generated_content"][content_type] = data["generated_content"][content_type][-1000:]
+            
+            with open(self.db_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return content_entry["id"]
+        except Exception as e:
+            logger.error(f"Error saving generated content: {e}")
+            return None
+
+progress_db = ProgressDatabase()
 
 # ============================================
 # PROCESADOR DE AUDIO
@@ -814,8 +702,7 @@ class AudioProcessor:
     def __init__(self):
         self.recognizer = sr.Recognizer()
     
-    def transcribe_audio(self, audio_bytes: bytes) -> dict:
-        """Transcribir audio"""
+    def transcribe_audio(self, audio_bytes):
         try:
             audio_io = io.BytesIO(audio_bytes)
             
@@ -845,10 +732,10 @@ audio_processor = AudioProcessor()
 def home():
     return jsonify({
         "status": "online",
-        "service": "Eli English Tutor v8.0 COMPLETO",
-        "version": "8.0.0",
+        "service": "Eli English Tutor - Dynamic v11.0",
+        "version": "11.0.0",
         "timestamp": datetime.now().isoformat(),
-        "features": ["Practice", "Games", "Scaffolding", "Spanish Detection"]
+        "features": ["Dynamic Content", "Tense-Based Learning", "Progress Tracking"]
     })
 
 @app.route('/api/health', methods=['GET'])
@@ -856,167 +743,499 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "sessions_active": len(session_manager.sessions)
+        "content_generator": "active"
     })
 
-@app.route('/api/sesion/iniciar', methods=['POST'])
-def iniciar_sesion():
-    try:
-        data = request.json or {}
-        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
-        
-        session = session_manager.create_session(user_id)
-        
-        return jsonify({
-            "estado": "exito",
-            "user_id": user_id,
-            "session_id": session.session_id,
-            "welcome_message": "🎯 Welcome to Eli! Let's practice English!",
-            "initial_level": session.current_level,
-            "initial_question": session.current_question
-        })
-    except Exception as e:
-        return jsonify({"estado": "error", "mensaje": str(e)[:100]}), 500
-
 # ============================================
-# ENDPOINT PRINCIPAL: PROCESAR AUDIO
+# ENDPOINT: PROCESAR AUDIO
 # ============================================
 @app.route('/api/process-audio', methods=['POST'])
-def process_audio_unified():
-    """Endpoint principal UNIFICADO"""
+def process_audio():
+    """Endpoint principal para procesar audio"""
     try:
         if 'audio' not in request.files:
-            return jsonify({
-                "status": "error",
-                "message": "No audio file provided"
-            }), 400
+            return jsonify({"status": "error", "message": "No audio file"}), 400
         
         audio_file = request.files['audio']
-        session_id = request.form.get('session_id', 'default_session')
-        user_id = request.form.get('user_id', 'default_user')
+        session_id = request.form.get('session_id', 'default')
+        user_id = request.form.get('user_id', 'anonymous')
         current_question = request.form.get('current_question', 'Tell me about yourself')
         
-        logger.info(f"🔊 Processing audio - Session: {session_id}, Question: {current_question}")
+        logger.info(f"Processing audio from {user_id}")
         
-        # Leer y transcribir
+        # Transcribir audio
         audio_bytes = audio_file.read()
-        transcription_result = audio_processor.transcribe_audio(audio_bytes)
-        texto = transcription_result['text']
+        transcription = audio_processor.transcribe_audio(audio_bytes)
+        user_text = transcription['text']
         
-        # Obtener sesión
-        session = session_manager.get_session(session_id)
-        if not session:
-            session = session_manager.create_session(user_id)
-        
-        session.current_question = current_question
-        
-        # Si no hay audio
-        if not texto or len(texto.strip()) < 2:
+        # Generar respuesta dinámica
+        if user_text and len(user_text.strip()) > 2:
+            # Analizar texto del usuario
+            detected_tense = _detect_tense_in_text(user_text)
+            user_level = _estimate_user_level(user_text)
+            
+            # Generar nueva pregunta
+            next_question = content_generator.generate_question(
+                difficulty=user_level,
+                force_tense=detected_tense
+            )
+            
+            # Análisis de pronunciación simulado
+            pronunciation_score = min(95, max(30, len(user_text.split()) * 5 + random.randint(-10, 10)))
+            
+            # Generar scaffolding
+            scaffolding = {
+                "template": content_generator._generate_suggested_response(
+                    next_question["question"],
+                    next_question["tense"],
+                    user_level
+                ),
+                "examples": [
+                    f"Example: {content_generator._generate_suggested_response(next_question['question'], next_question['tense'], user_level)}"
+                ],
+                "vocabulary": [next_question.get("suggested_word", "practice")],
+                "topic": next_question["topic"],
+                "level": user_level,
+                "tips": [
+                    f"Focus on {next_question['tense']} tense",
+                    "Speak clearly and slowly",
+                    "Use complete sentences"
+                ],
+                "current_question": next_question["question"],
+                "grammar_focus": next_question["grammar_focus"]
+            }
+            
+            response = {
+                "type": "conversation_response",
+                "message": f"""🎉 **Great!** I heard you say: "{user_text[:50]}..."
+
+📊 **Pronunciation:** {pronunciation_score}/100
+🎯 **Next Question:** {next_question['question']}
+🇪🇸 **En español:** {next_question['translation']}
+💡 **Grammar Focus:** {next_question['grammar_focus']}
+
+Keep up the good work!""",
+                "pronunciation_score": pronunciation_score,
+                "detected_level": user_level,
+                "needs_scaffolding": pronunciation_score < 70,
+                "scaffolding_data": scaffolding,
+                "next_question": next_question["question"],
+                "next_question_spanish": next_question["translation"],
+                "next_question_category": next_question["topic"],
+                "detected_language": transcription['language'],
+                "xp_earned": min(30, max(5, int(pronunciation_score / 3))),
+                "is_dynamic_content": True,
+                "tense_used": detected_tense,
+                "grammar_focus": next_question["grammar_focus"]
+            }
+        else:
+            # No se detectó audio
+            next_question = content_generator.generate_question(difficulty="beginner")
+            
             response = {
                 "type": "no_speech",
-                "message": """🎤 **I didn't hear anything**
+                "message": f"""🎤 **I didn't hear anything**
 
-💡 **Tips:**
-• Speak for 2-3 seconds
-• Be in a quiet place
-• Hold the microphone closer
+💡 **Try this question:** {next_question['question']}
+🇪🇸 **En español:** {next_question['translation']}
 
-🔊 **Try saying:**
-• "Hello, my name is..."
-• "I like to practice English"
-• "Today is a good day"
-
-🎯 **Ready when you are!**""",
+Speak clearly for 2-3 seconds!""",
                 "pronunciation_score": 0,
                 "detected_level": "beginner",
                 "needs_scaffolding": True,
                 "scaffolding_data": {
-                    "template": "Hello, my name is...",
-                    "examples": ["Hello, my name is [Your Name]", "I like to learn English"],
-                    "vocabulary": ["hello", "name", "my", "like", "learn"],
+                    "template": content_generator._generate_suggested_response(
+                        next_question["question"],
+                        next_question["tense"],
+                        "beginner"
+                    ),
+                    "examples": ["Try: 'Hello, my name is...'"],
+                    "vocabulary": ["hello", "name", "practice", "speak"],
                     "topic": "introduction",
                     "level": "beginner",
-                    "current_question": current_question
+                    "current_question": next_question["question"]
                 },
-                "next_question": "What is your name?",
+                "next_question": next_question["question"],
+                "next_question_spanish": next_question["translation"],
                 "detected_language": "unknown",
-                "xp_earned": 0
+                "xp_earned": 0,
+                "is_dynamic_content": True
             }
-        else:
-            # Análisis completo
-            lang_analysis = coach.detectar_idioma(texto)
-            duration_est = len(texto.split()) * 0.4
-            
-            if lang_analysis['is_spanish']:
-                if lang_analysis['needs_help']:
-                    response = coach.generar_respuesta_ayuda(texto, True, current_question)
-                else:
-                    response = coach.generar_respuesta_spanish(texto)
-            else:
-                if lang_analysis['needs_help']:
-                    response = coach.generar_respuesta_ayuda(texto, False, current_question)
-                else:
-                    pron_analysis = coach.analizar_pronunciacion(texto, duration_est)
-                    response = coach.generar_respuesta_normal(texto, pron_analysis, current_question)
-            
-            # Asegurar que ayuda mantiene pregunta actual
-            if response.get('is_help_response', False):
-                response['next_question'] = current_question
-            
-            # Actualizar sesión
-            session.add_conversation(texto, response['message'], response['pronunciation_score'])
-            session.xp += response['xp_earned']
-            session.update_level()
-            session.current_question = response['next_question']
-            session.needs_scaffolding = response['needs_scaffolding']
+            user_text = ""
         
-        # Respuesta final
-        final_response = {
+        # Guardar progreso
+        progress_db.save_user_progress(user_id, {
+            "session_id": session_id,
+            "xp": response.get("xp_earned", 0),
+            "level": response.get("detected_level", "beginner"),
+            "questions": 1
+        })
+        
+        # Guardar contenido generado
+        if response.get("is_dynamic_content"):
+            progress_db.save_generated_content("questions", {
+                "question": response.get("next_question"),
+                "tense": next_question.get("tense"),
+                "difficulty": response.get("detected_level")
+            })
+        
+        return jsonify({
             "status": "success",
             "data": {
                 **response,
-                "transcription": texto,
+                "transcription": user_text,
                 "session_info": {
                     "session_id": session_id,
                     "user_id": user_id,
-                    "current_level": session.current_level,
-                    "xp": session.xp,
-                    "xp_earned": response.get('xp_earned', 0),
-                    "current_question": session.current_question,
-                    "needs_scaffolding": session.needs_scaffolding
+                    "current_level": response.get("detected_level", "beginner"),
+                    "xp_earned": response.get("xp_earned", 0),
+                    "current_question": response.get("next_question"),
+                    "show_spanish_translation": True
                 }
             }
-        }
-        
-        return jsonify(final_response)
+        })
         
     except Exception as e:
-        logger.error(f"❌ Error in process-audio: {str(e)}")
-        return jsonify({"status": "error", "message": "Error processing audio"}), 500
+        logger.error(f"Error processing audio: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
 
 # ============================================
-# ENDPOINT PARA AYUDA EXPLÍCITA (BOTÓN HELP)
+# ENDPOINT: GENERAR VOCABULARIO DINÁMICO
 # ============================================
-@app.route('/api/request-help', methods=['POST'])
-def request_help():
-    """Endpoint para botón HELP"""
+@app.route('/api/generate/vocabulary', methods=['POST'])
+def generate_vocabulary():
+    """Genera vocabulario dinámico para juegos"""
+    try:
+        data = request.json or {}
+        difficulty = data.get('difficulty', 'beginner')
+        tense = data.get('tense', 'present')
+        category = data.get('category', 'general')
+        
+        # Generar contenido
+        vocabulary = content_generator.generate_vocabulary(difficulty, tense, category)
+        
+        # Guardar en base de datos
+        content_id = progress_db.save_generated_content("vocabulary", vocabulary)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                **vocabulary,
+                "content_id": content_id,
+                "game_type": "vocabulary",
+                "points": {"beginner": 10, "intermediate": 15, "advanced": 20}.get(difficulty, 10),
+                "instructions": f"Translate this {tense} tense word: '{vocabulary['word']}'",
+                "hint": f"Used in: '{vocabulary['sentence']}'"
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating vocabulary: {e}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
+
+# ============================================
+# ENDPOINT: GENERAR PREGUNTA DINÁMICA
+# ============================================
+@app.route('/api/generate/question', methods=['POST'])
+def generate_question():
+    """Genera pregunta dinámica para práctica"""
+    try:
+        data = request.json or {}
+        difficulty = data.get('difficulty', 'beginner')
+        topic = data.get('topic')
+        force_tense = data.get('tense')
+        
+        question = content_generator.generate_question(difficulty, topic, force_tense)
+        
+        # Guardar en base de datos
+        content_id = progress_db.save_generated_content("questions", question)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                **question,
+                "content_id": content_id
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating question: {e}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
+
+# ============================================
+# ENDPOINT: JUEGO DE VOCABULARIO DINÁMICO
+# ============================================
+@app.route('/api/game/vocabulary/start', methods=['POST'])
+def start_vocabulary_game():
+    """Inicia juego de vocabulario con contenido dinámico"""
+    try:
+        data = request.json or {}
+        difficulty = data.get('difficulty', 'beginner')
+        category = data.get('category', 'general')
+        session_id = data.get('session_id')
+        
+        # Determinar tiempo verbal según dificultad
+        tenses_by_difficulty = {
+            "beginner": ["present", "past", "future"],
+            "intermediate": ["present", "past", "future", "present_perfect"],
+            "advanced": ["past_perfect", "future_perfect", "conditional", "subjunctive"]
+        }
+        
+        available_tenses = tenses_by_difficulty.get(difficulty, ["present"])
+        selected_tense = random.choice(available_tenses)
+        
+        # Generar vocabulario
+        vocabulary = content_generator.generate_vocabulary(difficulty, selected_tense, category)
+        
+        # Determinar tipo de juego
+        game_types = ["translation", "sentence_completion", "tense_identification"]
+        game_type = random.choice(game_types)
+        
+        game_data = {
+            "type": "dynamic_vocabulary",
+            "content": vocabulary["word"],
+            "translation": vocabulary["translation"]["word"],
+            "sentence": vocabulary["sentence"],
+            "full_translation": vocabulary["translation"]["sentence"],
+            "tense": selected_tense,
+            "difficulty": difficulty,
+            "category": category,
+            "points": {"beginner": 10, "intermediate": 15, "advanced": 20}.get(difficulty, 10),
+            "grammar_info": vocabulary["grammar"],
+            "is_generated": True
+        }
+        
+        # Añadir instrucciones según tipo de juego
+        if game_type == "translation":
+            game_data["instructions"] = f"Translate this {selected_tense} tense word to Spanish: '{vocabulary['word']}'"
+            game_data["hint"] = f"Used in: '{vocabulary['sentence']}'"
+        elif game_type == "sentence_completion":
+            incomplete = vocabulary["sentence"].replace(vocabulary["word"], "_____")
+            game_data["instructions"] = f"Complete the sentence: '{incomplete}'"
+            game_data["hint"] = f"Tense: {selected_tense} | Translation: {vocabulary['translation']['word']}"
+        else:  # tense_identification
+            game_data["instructions"] = f"What tense is used in: '{vocabulary['sentence']}'?"
+            game_data["hint"] = f"Options: present, past, future, perfect"
+        
+        game_data["game_type"] = game_type
+        
+        return jsonify({
+            "status": "success",
+            "data": game_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting vocabulary game: {e}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
+
+# ============================================
+# ENDPOINT: VALIDAR RESPUESTA DE JUEGO
+# ============================================
+@app.route('/api/game/vocabulary/validate', methods=['POST'])
+def validate_vocabulary_game():
+    """Valida respuesta del juego de vocabulario"""
+    try:
+        data = request.json or {}
+        game_data = data.get('game_data', {})
+        user_answer = data.get('user_answer', '').strip().lower()
+        session_id = data.get('session_id')
+        
+        correct = False
+        points = game_data.get('points', 10)
+        
+        # Lógica de validación según tipo de juego
+        game_type = game_data.get('game_type', 'translation')
+        correct_answer = game_data.get('translation', '').lower()
+        target_word = game_data.get('content', '').lower()
+        
+        if game_type == "translation":
+            # Validar traducción (flexible)
+            correct = _validate_translation(user_answer, correct_answer, target_word)
+        elif game_type == "sentence_completion":
+            # Validar palabra faltante
+            correct = user_answer == target_word
+        else:  # tense_identification
+            correct_tense = game_data.get('tense', 'present')
+            correct = user_answer in correct_tense or correct_tense in user_answer
+        
+        # Calcular puntos
+        points_earned = points if correct else max(1, points // 3)
+        
+        # Mensaje de retroalimentación
+        if correct:
+            tense_info = game_data.get('tense', 'present')
+            message = f"🎯 Correct! {points_earned} points!\n"
+            if tense_info != 'present':
+                message += f"Excellent use of {tense_info} tense!"
+        else:
+            message = f"📚 Almost! The correct answer was: '{correct_answer}'"
+            if game_data.get('grammar_info'):
+                message += f"\n💡 Grammar tip: {game_data['grammar_info']['description']}"
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "is_correct": correct,
+                "points_earned": points_earned,
+                "message": message,
+                "correct_answer": correct_answer,
+                "tense": game_data.get('tense'),
+                "grammar_tip": game_data.get('grammar_info', {}).get('description', '')
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error validating vocabulary game: {e}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
+
+# ============================================
+# ENDPOINT: JUEGO DE PRONUNCIACIÓN DINÁMICO
+# ============================================
+@app.route('/api/game/pronunciation/start', methods=['POST'])
+def start_pronunciation_game():
+    """Inicia juego de pronunciación con contenido dinámico"""
+    try:
+        data = request.json or {}
+        difficulty = data.get('difficulty', 'beginner')
+        
+        # Generar oración según dificultad
+        if difficulty == "beginner":
+            vocab = content_generator.generate_vocabulary("beginner", "present", "general")
+            sentence = vocab["sentence"]
+            tense = "present"
+        elif difficulty == "intermediate":
+            vocab = content_generator.generate_vocabulary("intermediate", "past", "work_study")
+            sentence = vocab["sentence"]
+            tense = "past"
+        else:  # advanced
+            vocab = content_generator.generate_vocabulary("advanced", "conditional", "personal")
+            sentence = vocab["sentence"]
+            tense = "conditional"
+        
+        # Crear datos del juego
+        game_data = {
+            "type": "pronunciation_challenge",
+            "content": sentence,
+            "translation": vocab.get("translation", {}).get("sentence", sentence),
+            "difficulty": difficulty,
+            "tense": tense,
+            "points": {"beginner": 15, "intermediate": 25, "advanced": 35}.get(difficulty, 15),
+            "focus": f"Clarity and {tense} tense pronunciation",
+            "challenge_type": "sentence_repetition",
+            "is_generated": True
+        }
+        
+        return jsonify({
+            "status": "success",
+            "data": game_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting pronunciation game: {e}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
+
+# ============================================
+# ENDPOINT: OBTENER PREGUNTA
+# ============================================
+@app.route('/api/get-question', methods=['POST'])
+def get_question_endpoint():
+    """Obtiene pregunta dinámica"""
     try:
         data = request.json or {}
         session_id = data.get('session_id', '')
-        user_id = data.get('user_id', '')
-        current_question = data.get('current_question', 'Tell me about yourself')
+        topic = data.get('topic', '')
+        force_new = data.get('force_new', False)
         
-        logger.info(f"🆘 Help request - Question: {current_question}")
+        # Determinar dificultad basada en sesión
+        difficulty = "beginner"  # Por defecto
         
-        # Generar ayuda
-        response = coach.generar_respuesta_ayuda(
-            texto="I need help with this question",
-            es_spanish=False,
-            current_question=current_question
+        # Generar pregunta
+        question = content_generator.generate_question(
+            difficulty=difficulty,
+            topic=topic if topic else None
         )
         
-        # Forzar misma pregunta
-        response['next_question'] = current_question
+        return jsonify({
+            "status": "success",
+            "data": {
+                **question,
+                "show_spanish_translation": True,
+                "session_id": session_id
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting question: {e}")
+        return jsonify({
+            "status": "success",
+            "data": {
+                "question": "What did you do yesterday?",
+                "translation": "¿Qué hiciste ayer?",
+                "tense": "past",
+                "difficulty": "beginner",
+                "topic": "daily_life",
+                "is_generated": False
+            }
+        })
+
+# ============================================
+# ENDPOINT: AYUDA EXPLÍCITA
+# ============================================
+@app.route('/api/request-help', methods=['POST'])
+def request_help():
+    """Proporciona ayuda específica para una pregunta"""
+    try:
+        data = request.json or {}
+        current_question = data.get('current_question', 'Tell me about yourself')
+        session_id = data.get('session_id', '')
+        
+        # Analizar pregunta para determinar tiempo verbal
+        detected_tense = _detect_tense_in_question(current_question)
+        difficulty = "beginner"
+        
+        # Generar scaffolding específico
+        suggested_response = content_generator._generate_suggested_response(
+            current_question,
+            detected_tense,
+            difficulty
+        )
+        
+        # Obtener vocabulario relevante
+        vocab = content_generator.generate_vocabulary(difficulty, detected_tense, "general")
+        
+        response = {
+            "type": "help_response",
+            "message": f"""🆘 **I'll help you answer this question:**
+
+❓ **Question:** {current_question}
+💡 **Suggested structure:** "{suggested_response}"
+🔤 **Useful vocabulary:** {vocab['word']} ({vocab['translation']['word']})
+🎯 **Tense to use:** {detected_tense}
+
+**Try saying:** "{suggested_response}" """,
+            "pronunciation_score": 0,
+            "detected_level": difficulty,
+            "needs_scaffolding": True,
+            "scaffolding_data": {
+                "template": suggested_response,
+                "examples": [suggested_response],
+                "vocabulary": [vocab['word'], vocab['translation']['word']],
+                "topic": "general",
+                "level": difficulty,
+                "tips": [
+                    f"Use {detected_tense} tense",
+                    "Speak slowly and clearly",
+                    "Add personal details"
+                ],
+                "current_question": current_question,
+                "grammar_focus": f"{detected_tense} tense practice"
+            },
+            "next_question": current_question,  # Mantener misma pregunta
+            "detected_language": "en",
+            "xp_earned": 10,
+            "is_help_response": True,
+            "is_dynamic_content": True
+        }
         
         return jsonify({
             "status": "success",
@@ -1024,277 +1243,167 @@ def request_help():
         })
         
     except Exception as e:
-        logger.error(f"Error in request-help: {str(e)}")
-        return jsonify({"status": "error", "message": "Error processing help"}), 500
+        logger.error(f"Error in request-help: {e}")
+        return jsonify({"status": "error", "message": str(e)[:100]}), 500
 
 # ============================================
-# ENDPOINT PARA PREGUNTAS
+# ENDPOINT: INICIAR SESIÓN
 # ============================================
-@app.route('/api/get-question', methods=['POST'])
-def get_question():
+@app.route('/api/sesion/iniciar', methods=['POST'])
+def iniciar_sesion():
     try:
         data = request.json or {}
-        session_id = data.get('session_id', '')
-        topic = data.get('topic', 'general')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
         
-        session = None
-        if session_id:
-            session = session_manager.get_session(session_id)
-        
-        level = session.current_level if session else "beginner"
-        
-        preguntas = {
-            "general": [
-                "What is your name and where are you from?",
-                "Tell me about your family.",
-                "What do you like to do in your free time?",
-                "Describe your daily routine.",
-                "What is your favorite food and why?"
-            ],
-            "family": [
-                "Do you have any brothers or sisters?",
-                "What activities do you enjoy with your family?",
-                "Tell me about your parents.",
-                "What family traditions do you have?"
-            ],
-            "hobbies": [
-                "What are your hobbies?",
-                "How did you get interested in your favorite hobby?",
-                "What do you enjoy most about your free time?"
-            ]
-        }
-        
-        questions = preguntas.get(topic, preguntas["general"])
-        question = random.choice(questions)
-        
-        if session:
-            session.current_question = question
-        
-        return jsonify({
-            "status": "success",
-            "data": {
-                "question": question,
-                "topic": topic,
-                "level": level
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Error in get-question: {str(e)}")
-        return jsonify({
-            "status": "success",
-            "data": {
-                "question": "Tell me about yourself",
-                "topic": "general",
-                "level": "beginner"
-            }
-        })
-
-# ============================================
-# ENDPOINTS DE JUEGOS (COMPLETOS)
-# ============================================
-@app.route('/api/game/vocabulary/start', methods=['POST'])
-def start_vocabulary_game():
-    try:
-        data = request.json or {}
-        session_id = data.get('session_id', '')
-        difficulty = data.get('difficulty', 'beginner')
-        category = data.get('category', None)
-        
-        if session_id and difficulty == 'beginner':
-            session = session_manager.get_session(session_id)
-            if session:
-                difficulty = session.current_level
-        
-        game_round = vocabulary_game.get_game_round(difficulty, category)
-        
-        return jsonify({
-            "status": "success",
-            "data": game_round
-        })
-        
-    except Exception as e:
-        logger.error(f"Error starting vocabulary game: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)[:100]
-        }), 500
-
-@app.route('/api/game/vocabulary/validate', methods=['POST'])
-def validate_vocabulary_game():
-    try:
-        data = request.json or {}
-        session_id = data.get('session_id', '')
-        game_data = data.get('game_data', {})
-        user_answer = data.get('user_answer', '')
-        
-        if not game_data or not user_answer:
-            return jsonify({"status": "error", "message": "Missing data"}), 400
-        
-        result = vocabulary_game.validate_answer(game_data, user_answer, session_id)
-        
-        return jsonify({
-            "status": "success",
-            "data": result
-        })
-        
-    except Exception as e:
-        logger.error(f"Error validating vocabulary game: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)[:100]
-        }), 500
-
-@app.route('/api/game/pronunciation/start', methods=['POST'])
-def start_pronunciation_game():
-    try:
-        data = request.json or {}
-        session_id = data.get('session_id', '')
-        difficulty = data.get('difficulty', 'beginner')
-        
-        if session_id and difficulty == 'beginner':
-            session = session_manager.get_session(session_id)
-            if session:
-                difficulty = session.current_level
-        
-        challenge = pronunciation_game.get_pronunciation_challenge(difficulty)
-        
-        return jsonify({
-            "status": "success",
-            "data": challenge
-        })
-        
-    except Exception as e:
-        logger.error(f"Error starting pronunciation game: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)[:100]
-        }), 500
-
-@app.route('/api/game/pronunciation/validate', methods=['POST'])
-def validate_pronunciation_game():
-    try:
-        data = request.json or {}
-        session_id = data.get('session_id', '')
-        game_data = data.get('game_data', {})
-        
-        result = pronunciation_game.validate_pronunciation(game_data, session_id)
-        
-        return jsonify({
-            "status": "success",
-            "data": result
-        })
-        
-    except Exception as e:
-        logger.error(f"Error validating pronunciation game: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)[:100]
-        }), 500
-
-@app.route('/api/game/categories', methods=['GET'])
-def get_game_categories():
-    try:
-        session_id = request.args.get('session_id', '')
-        difficulty = request.args.get('difficulty', 'beginner')
-        
-        if session_id:
-            session = session_manager.get_session(session_id)
-            if session:
-                difficulty = session.current_level
-        
-        categories = list(vocabulary_game.categories.get(difficulty, vocabulary_game.categories["beginner"]).keys())
-        
-        return jsonify({
-            "status": "success",
-            "data": {
-                "categories": categories,
-                "difficulty": difficulty,
-                "game_types": ["vocabulary", "pronunciation"]
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting game categories: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)[:100]
-        }), 500
-
-# ============================================
-# ENDPOINTS DE ESTADÍSTICAS
-# ============================================
-@app.route('/api/estadisticas', methods=['GET'])
-def obtener_estadisticas():
-    try:
-        session_id = request.args.get('session_id')
-        
-        if session_id:
-            session = session_manager.get_session(session_id)
-            if session:
-                return jsonify({
-                    "estado": "exito", 
-                    "stats": session.to_dict(),
-                    "game_stats": session.game_stats,
-                    "recent_games": session.game_history[-5:] if session.game_history else []
-                })
+        # Generar primera pregunta
+        first_question = content_generator.generate_question(difficulty="beginner")
         
         return jsonify({
             "estado": "exito",
-            "global_stats": {
-                "total_sessions": len(session_manager.sessions)
-            }
+            "user_id": user_id,
+            "session_id": f"{user_id[:6]}_{int(time.time())}",
+            "welcome_message": "🎯 Welcome to Eli! Practice English with AI-generated content!",
+            "initial_level": "beginner",
+            "initial_question": first_question["question"],
+            "initial_question_spanish": first_question["translation"],
+            "show_spanish_translation": True,
+            "xp": 0,
+            "is_dynamic_content": True
         })
     except Exception as e:
         return jsonify({"estado": "error", "mensaje": str(e)[:100]}), 500
 
-@app.route('/api/game/leaderboard', methods=['GET'])
-def get_leaderboard():
+# ============================================
+# ENDPOINT: PROGRESO
+# ============================================
+@app.route('/api/progress/save', methods=['POST'])
+def save_progress():
     try:
-        all_sessions = list(session_manager.sessions.values())
-        sorted_sessions = sorted(all_sessions, key=lambda s: s.xp, reverse=True)[:10]
+        data = request.json or {}
+        user_id = data.get('user_id')
         
-        leaderboard = []
-        for i, session in enumerate(sorted_sessions, 1):
-            leaderboard.append({
-                "rank": i,
-                "user_id": session.user_id[:8] + "...",
-                "xp": session.xp,
-                "level": session.current_level,
-                "games_played": session.game_stats["games_played"],
-                "accuracy": round(session.game_stats["correct_answers"] / session.game_stats["total_attempts"] * 100, 1) 
-                if session.game_stats["total_attempts"] > 0 else 0
-            })
+        if not user_id:
+            return jsonify({"estado": "error", "mensaje": "User ID required"}), 400
+        
+        progress_db.save_user_progress(user_id, data)
         
         return jsonify({
-            "status": "success",
-            "data": {
-                "leaderboard": leaderboard,
-                "updated": datetime.now().isoformat()
-            }
+            "estado": "exito",
+            "mensaje": "Progress saved",
+            "user_id": user_id
         })
         
     except Exception as e:
-        logger.error(f"Error getting leaderboard: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)[:100]
-        }), 500
+        return jsonify({"estado": "error", "mensaje": str(e)[:100]}), 500
+
+@app.route('/api/progress/load', methods=['POST'])
+def load_progress():
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return jsonify({"estado": "error", "mensaje": "User ID required"}), 400
+        
+        progress = progress_db.load_user_progress(user_id)
+        
+        if progress:
+            return jsonify({
+                "estado": "exito",
+                "progress_found": True,
+                "user_data": {
+                    "user_id": user_id,
+                    "current_level": progress.get("current_level", "beginner"),
+                    "total_xp": progress.get("total_xp", 0),
+                    "total_sessions": len(progress.get("sessions", [])),
+                    "last_seen": progress.get("last_seen")
+                }
+            })
+        else:
+            return jsonify({
+                "estado": "exito",
+                "progress_found": False,
+                "mensaje": "No previous progress found"
+            })
+        
+    except Exception as e:
+        return jsonify({"estado": "error", "mensaje": str(e)[:100]}), 500
 
 # ============================================
-# ENDPOINTS DE COMPATIBILIDAD
+# FUNCIONES AUXILIARES
 # ============================================
-@app.route('/api/conversar_audio', methods=['POST'])
-def conversar_audio():
-    try:
-        if 'audio' not in request.files:
-            return jsonify({"estado": "error", "respuesta": "No audio file"}), 400
-        
-        return process_audio_unified()
+def _detect_tense_in_text(text):
+    """Detecta tiempo verbal en texto"""
+    text_lower = text.lower()
     
-    except Exception as e:
-        logger.error(f"Error in conversar_audio: {str(e)}")
-        return jsonify({"estado": "error", "respuesta": "Error processing audio"}), 500
+    tense_indicators = {
+        "past": ["yesterday", "last", "ago", "was", "were", "did", "had", "went"],
+        "future": ["will", "tomorrow", "next", "going to", "gonna"],
+        "present_perfect": ["have", "has", "ever", "never", "just", "already"],
+        "present_continuous": ["am", "is", "are", "ing"],
+        "conditional": ["would", "could", "should", "might"]
+    }
+    
+    for tense, indicators in tense_indicators.items():
+        for indicator in indicators:
+            if indicator in text_lower:
+                return tense
+    
+    return "present"
+
+def _detect_tense_in_question(question):
+    """Detecta tiempo verbal en pregunta"""
+    question_lower = question.lower()
+    
+    if "did" in question_lower:
+        return "past"
+    elif "will" in question_lower:
+        return "future"
+    elif "have" in question_lower or "has" in question_lower:
+        return "present_perfect"
+    elif "are" in question_lower and "ing" in question_lower:
+        return "present_continuous"
+    elif "would" in question_lower or "could" in question_lower:
+        return "conditional"
+    else:
+        return "present"
+
+def _estimate_user_level(text):
+    """Estima nivel del usuario basado en texto"""
+    word_count = len(text.split())
+    
+    if word_count < 3:
+        return "beginner"
+    elif word_count < 8:
+        return "intermediate"
+    else:
+        return "advanced"
+
+def _validate_translation(user_answer, correct_answer, english_word):
+    """Valida traducción de manera flexible"""
+    # Normalizar respuestas
+    user_norm = user_answer.strip().lower()
+    correct_norm = correct_answer.strip().lower()
+    
+    # Coincidencia exacta
+    if user_norm == correct_norm:
+        return True
+    
+    # Coincidencia parcial
+    if correct_norm in user_norm or user_norm in correct_norm:
+        return True
+    
+    # Para verbos, verificar formas conjugadas
+    verb_equivalents = {
+        "comer": ["como", "comes", "come", "comemos", "comen"],
+        "beber": ["bebo", "bebes", "bebe", "bebemos", "beben"],
+        "estudiar": ["estudio", "estudias", "estudia", "estudiamos", "estudian"]
+    }
+    
+    if english_word in ["eat", "drink", "study"] and user_norm in verb_equivalents.get(correct_norm, []):
+        return True
+    
+    return False
 
 # ============================================
 # EJECUCIÓN
@@ -1303,16 +1412,15 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     
     print("=" * 60)
-    print(f"🚀 Eli English Tutor v8.0 - SISTEMA COMPLETO")
-    print(f"📡 Puerto: {port}")
+    print("🚀 Eli Backend v11.0 - GENERACIÓN DINÁMICA COMPLETA")
+    print(f"📡 Running on port: {port}")
     print("=" * 60)
-    print("✅ CARACTERÍSTICAS INCLUIDAS:")
-    print("   • Sistema Coach unificado")
-    print("   • Detección de español/inglés")
-    print("   • Scaffolding automático")
-    print("   • Sistema de juegos COMPLETO")
-    print("   • Endpoint de ayuda explícita")
-    print("   • Estadísticas y leaderboard")
+    print("✅ FEATURES:")
+    print("   • Dynamic question generation")
+    print("   • Tense-based vocabulary")
+    print("   • Spanish translations")
+    print("   • Grammar explanations")
+    print("   • Progress persistence")
     print("=" * 60)
     
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
