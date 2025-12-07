@@ -1,9 +1,9 @@
 """
-ELI ENGLISH TUTOR - BACKEND CON CONTROL TOTAL V13.0
+ELI ENGLISH TUTOR - BACKEND CON CONTROL TOTAL V14.0
 ✅ CORRECCIONES CRÍTICAS APLICADAS:
 1. Traducciones 100% profesionales predefinidas
 2. Preguntas con gramática perfecta
-3. Scaffolding específico por pregunta
+3. Scaffolding ESPECÍFICO y CORRECTO por pregunta
 4. Control total del backend
 5. Eliminada lógica del frontend
 """
@@ -37,8 +37,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 print("=" * 60)
-print("🚀 Eli English Tutor - Backend v13.0")
-print("🎯 CONTROL TOTAL - Traducciones profesionales")
+print("🚀 Eli English Tutor - Backend v14.0")
+print("🎯 SCAFFOLDING CORREGIDO - Gramática perfecta")
 print("=" * 60)
 
 class Config:
@@ -227,251 +227,417 @@ class QuestionDatabase:
         }
     
     def get_scaffolding_for_question(self, question_english, level="beginner"):
-        """Genera scaffolding ESPECÍFICO para cada pregunta"""
+        """Genera scaffolding ESPECÍFICO y CORRECTO para cada pregunta"""
         
-        # MAPA DE SCAFFOLDING POR PREGUNTA
+        # DETECTAR TIPO DE PREGUNTA Y TIEMPO VERBAL
+        tense = self._detect_tense(question_english)
+        question_type = self._classify_question(question_english)
+        topic = self._detect_topic(question_english)
+        
+        # MAPA DE SCAFFOLDING CORREGIDO - ¡100% ESPECÍFICO!
         scaffolding_map = {
-            # BEGINNER QUESTIONS
+            # ========== BEGINNER QUESTIONS ==========
             "What is your name?": {
-                "template": "My name is [Your Name].",
-                "vocabulary": ["name", "My name is", "I am", "called"],
-                "grammar_tip": "Use 'My name is' for formal introduction, 'I am' for casual.",
-                "common_mistakes": ["I name is (incorrect)", "My name (incomplete)"],
+                "template": "My name is [your name]. I am from [your country/city].",
+                "vocabulary": ["name", "My name is", "I am", "called", "from", "originally from"],
+                "grammar_tip": "Use 'My name is' for formal introduction. Use 'I am' for casual situations.",
+                "common_mistakes": ["I name is (incorrect)", "My name (incomplete sentence)"],
                 "practice_sentences": [
-                    "My name is John.",
-                    "I am Maria.",
-                    "They call me Alex."
+                    "My name is John. I am from New York.",
+                    "My name is Maria. I am originally from Spain.",
+                    "They call me Alex. I am from London."
+                ],
+                "sentence_starters": [
+                    "My name is...",
+                    "I am called...",
+                    "People call me...",
+                    "I go by the name..."
                 ]
             },
             
             "How old are you?": {
-                "template": "I am [number] years old.",
-                "vocabulary": ["years old", "age", "I am", "turning"],
-                "grammar_tip": "Always use 'years old' after the number.",
-                "common_mistakes": ["I have 25 years (incorrect in English)"],
+                "template": "I am [number] years old. I will be [next number] next [month/year].",
+                "vocabulary": ["years old", "age", "I am", "turning", "next", "birthday"],
+                "grammar_tip": "Always use 'years old' after the number. Never say 'I have X years' in English.",
+                "common_mistakes": ["I have 25 years (Spanish structure)", "I am 25 (incomplete)"],
                 "practice_sentences": [
-                    "I am 25 years old.",
-                    "She is 30 years old.",
-                    "He will be 40 next month."
+                    "I am 25 years old. I will be 26 next month.",
+                    "She is 30 years old. Her birthday is in June.",
+                    "He is 40 years old. He was born in 1983."
+                ],
+                "sentence_starters": [
+                    "I am... years old.",
+                    "I'm... years old.",
+                    "I'll be... next...",
+                    "My age is..."
                 ]
             },
             
             "Where are you from?": {
-                "template": "I am from [country/city].",
-                "vocabulary": ["from", "originally from", "come from", "born in"],
-                "grammar_tip": "Use 'I am from' for current nationality, 'I was born in' for birth place.",
-                "common_mistakes": ["I from Mexico (missing 'am')"],
+                "template": "I am from [country]. I live in [city].",
+                "vocabulary": ["from", "originally from", "come from", "born in", "live in", "grew up in"],
+                "grammar_tip": "Use 'I am from' for nationality. Use 'I live in' for current residence.",
+                "common_mistakes": ["I from Mexico (missing 'am')", "I live from (wrong preposition)"],
                 "practice_sentences": [
-                    "I am from Spain.",
-                    "I come from Argentina.",
-                    "I was born in Colombia."
-                ]
-            },
-            
-            "What do you do?": {
-                "template": "I am a [profession].",
-                "vocabulary": ["job", "work as", "profession", "career"],
-                "grammar_tip": "Use 'a' before consonant sounds, 'an' before vowel sounds.",
-                "common_mistakes": ["I am teacher (missing 'a')"],
-                "practice_sentences": [
-                    "I am a teacher.",
-                    "I work as a doctor.",
-                    "My profession is engineering."
+                    "I am from Mexico. I live in Mexico City.",
+                    "I come from Argentina. I was born in Buenos Aires.",
+                    "I am originally from Colombia but I live in the United States now."
+                ],
+                "sentence_starters": [
+                    "I am from...",
+                    "I come from...",
+                    "I was born in...",
+                    "I live in..."
                 ]
             },
             
             "What do you like to eat?": {
-                "template": "I like to eat [food].",
-                "vocabulary": ["like", "enjoy", "favorite", "prefer", "cuisine"],
-                "grammar_tip": "Use 'like to + verb' for preferences.",
-                "common_mistakes": ["I like eat pizza (missing 'to')"],
+                "template": "I like to eat [food]. My favorite dish is [specific dish].",
+                "vocabulary": ["like", "enjoy", "favorite", "prefer", "dish", "cuisine", "meal"],
+                "grammar_tip": "Use 'like to + verb' or 'enjoy + verb-ing' for preferences.",
+                "common_mistakes": ["I like eat pizza (missing 'to')", "I enjoy to eat (wrong structure)"],
                 "practice_sentences": [
-                    "I like to eat pizza.",
-                    "I enjoy Italian food.",
-                    "My favorite food is sushi."
+                    "I like to eat pizza. My favorite is pepperoni pizza.",
+                    "I enjoy eating sushi. Japanese food is my favorite.",
+                    "I prefer Italian food. I love pasta and pizza."
+                ],
+                "sentence_starters": [
+                    "I like to eat...",
+                    "I enjoy eating...",
+                    "My favorite food is...",
+                    "I really like..."
                 ]
             },
             
             "What did you do yesterday?": {
-                "template": "Yesterday, I [past tense verb].",
-                "vocabulary": ["yesterday", "last night", "in the morning", "during the day"],
-                "grammar_tip": "Use past simple for completed actions in the past.",
-                "common_mistakes": ["Yesterday I go (should be 'went')"],
+                "template": "Yesterday, I [past tense verb]. After that, I [another past tense verb].",
+                "vocabulary": ["yesterday", "last night", "in the morning", "during the day", "after", "then"],
+                "grammar_tip": "Use past simple (verb + ed or irregular form) for completed actions in the past.",
+                "common_mistakes": ["Yesterday I go (should be 'went')", "I did worked (double past)"],
                 "practice_sentences": [
-                    "Yesterday, I worked.",
-                    "I studied English last night.",
-                    "She visited her friend yesterday."
+                    "Yesterday, I worked. After that, I went to the gym.",
+                    "I studied English last night. Then I watched a movie.",
+                    "She visited her friend yesterday. They had lunch together."
+                ],
+                "sentence_starters": [
+                    "Yesterday, I...",
+                    "Last night, I...",
+                    "In the morning, I...",
+                    "After work/school, I..."
                 ]
             },
             
             "What will you do tomorrow?": {
-                "template": "Tomorrow, I will [base verb].",
-                "vocabulary": ["tomorrow", "will", "going to", "plan to"],
-                "grammar_tip": "Use 'will' for spontaneous decisions, 'going to' for plans.",
-                "common_mistakes": ["Tomorrow I go (should be 'will go')"],
+                "template": "Tomorrow, I will [base verb]. I also plan to [another base verb].",
+                "vocabulary": ["tomorrow", "will", "going to", "plan to", "intend to", "might", "probably"],
+                "grammar_tip": "Use 'will' for spontaneous decisions. Use 'going to' for plans.",
+                "common_mistakes": ["Tomorrow I go (should be 'will go')", "I will to study (should be 'will study')"],
                 "practice_sentences": [
-                    "Tomorrow, I will study.",
-                    "I am going to meet friends.",
-                    "She will travel next week."
+                    "Tomorrow, I will study. I also plan to go to the library.",
+                    "I am going to meet friends. We will have lunch together.",
+                    "She will travel next week. She is going to visit her family."
+                ],
+                "sentence_starters": [
+                    "Tomorrow, I will...",
+                    "I am going to...",
+                    "I plan to...",
+                    "I might..."
                 ]
             },
             
-            # INTERMEDIATE QUESTIONS
-            "What are your hobbies?": {
-                "template": "My hobbies are [hobby1] and [hobby2].",
-                "vocabulary": ["hobbies", "interests", "activities", "pastimes"],
-                "grammar_tip": "Use plural for multiple hobbies, gerund (-ing) for activities.",
-                "common_mistakes": ["My hobby is read books (should be 'reading books')"],
+            "Where will you go tomorrow?": {
+                "template": "Tomorrow, I will go to [place]. I need to [purpose].",
+                "vocabulary": ["go to", "visit", "travel to", "meet at", "purpose", "reason", "because"],
+                "grammar_tip": "Use 'will + go' for future movement. Add 'to' before the place.",
+                "common_mistakes": ["I will go school (missing 'to')", "I go to tomorrow (wrong word order)"],
                 "practice_sentences": [
-                    "My hobbies are reading and swimming.",
-                    "I enjoy playing guitar.",
-                    "She likes hiking and photography."
+                    "Tomorrow, I will go to school. I need to attend classes.",
+                    "I will visit the museum. I want to see the new exhibition.",
+                    "She will travel to Paris. She is going for a business meeting."
+                ],
+                "sentence_starters": [
+                    "I will go to...",
+                    "I'm going to visit...",
+                    "I plan to travel to...",
+                    "I need to go to..."
+                ]
+            },
+            
+            # ========== INTERMEDIATE QUESTIONS ==========
+            "What are your hobbies?": {
+                "template": "My hobbies are [hobby1] and [hobby2]. I enjoy them because [reason].",
+                "vocabulary": ["hobbies", "interests", "activities", "pastimes", "passion", "leisure time"],
+                "grammar_tip": "Use plural for multiple hobbies. Use gerund (-ing) for activities: 'reading', 'swimming'.",
+                "common_mistakes": ["My hobby is read books (should be 'reading books')", "I enjoy to swim (should be 'swimming')"],
+                "practice_sentences": [
+                    "My hobbies are reading and swimming. I enjoy them because they help me relax.",
+                    "I enjoy playing guitar. Music is my passion.",
+                    "She likes hiking and photography. They allow her to connect with nature."
+                ],
+                "sentence_starters": [
+                    "My hobbies are...",
+                    "I enjoy...",
+                    "In my free time, I like to...",
+                    "One of my favorite activities is..."
                 ]
             },
             
             "Have you ever traveled abroad?": {
-                "template": "Yes, I have traveled to [country].",
-                "vocabulary": ["traveled", "visited", "been to", "abroad", "overseas"],
-                "grammar_tip": "Use present perfect (have/has + past participle) for experiences.",
-                "common_mistakes": ["I traveled to France last year (simple past ok for specific time)"],
+                "template": "Yes, I have traveled to [country]. I went there in [year] and I [past experience].",
+                "vocabulary": ["traveled", "visited", "been to", "abroad", "overseas", "foreign country", "experience"],
+                "grammar_tip": "Use present perfect (have/has + past participle) for life experiences without specific time.",
+                "common_mistakes": ["I traveled to France last year (simple past ok for specific time)", "I have travel (should be 'traveled')"],
                 "practice_sentences": [
-                    "Yes, I have traveled to Japan.",
-                    "I have visited three countries.",
-                    "She has never been abroad."
+                    "Yes, I have traveled to Japan. I went there in 2019 and I visited Tokyo.",
+                    "I have been to three countries. My favorite was Italy.",
+                    "She has never traveled abroad, but she wants to visit Spain."
+                ],
+                "sentence_starters": [
+                    "Yes, I have...",
+                    "I've been to...",
+                    "I have visited...",
+                    "No, I haven't... but I would like to..."
                 ]
             },
             
             "What have you learned recently?": {
-                "template": "Recently, I have learned [skill/knowledge].",
-                "vocabulary": ["learned", "discovered", "figured out", "mastered"],
-                "grammar_tip": "Use present perfect for recent actions with present relevance.",
-                "common_mistakes": ["I learned English last year (simple past for specific time)"],
+                "template": "Recently, I have learned [skill/knowledge]. This has helped me to [benefit].",
+                "vocabulary": ["learned", "discovered", "figured out", "mastered", "recently", "lately", "new"],
+                "grammar_tip": "Use present perfect for recent actions with present relevance. Use 'has helped' for results.",
+                "common_mistakes": ["I learned English last year (simple past for specific time)", "I have learn (should be 'learned')"],
                 "practice_sentences": [
-                    "Recently, I have learned to cook.",
-                    "I have discovered a new author.",
-                    "She has mastered Spanish grammar."
+                    "Recently, I have learned to cook. This has helped me to eat healthier.",
+                    "I have discovered a new author. I enjoy reading his books.",
+                    "She has mastered Spanish grammar. Now she can speak more confidently."
+                ],
+                "sentence_starters": [
+                    "Recently, I have learned...",
+                    "Lately, I've been learning...",
+                    "I have discovered...",
+                    "I've figured out how to..."
                 ]
             },
             
-            # ADVANCED QUESTIONS
+            # ========== ADVANCED QUESTIONS ==========
             "What are your long-term career goals?": {
-                "template": "My long-term goals are to [goal1] and [goal2].",
-                "vocabulary": ["aspirations", "objectives", "aims", "professional development"],
-                "grammar_tip": "Use infinitive (to + verb) for goals and aspirations.",
-                "common_mistakes": ["My goal is become manager (should be 'to become')"],
+                "template": "My long-term goals are to [goal1] and [goal2]. To achieve this, I plan to [action].",
+                "vocabulary": ["aspirations", "objectives", "aims", "professional development", "career path", "advancement"],
+                "grammar_tip": "Use infinitive (to + verb) for goals: 'to become', 'to achieve', 'to start'.",
+                "common_mistakes": ["My goal is become manager (should be 'to become')", "I want improving (should be 'to improve')"],
                 "practice_sentences": [
-                    "My long-term goals are to become a manager and start my own business.",
-                    "I aim to publish a book within five years.",
-                    "Her objective is to lead an international team."
+                    "My long-term goals are to become a manager and start my own business. To achieve this, I plan to get an MBA.",
+                    "I aim to publish a book within five years. I'm currently working on my writing skills.",
+                    "Her objective is to lead an international team. She's learning multiple languages."
+                ],
+                "sentence_starters": [
+                    "My long-term goals are to...",
+                    "I aspire to...",
+                    "My career objectives include...",
+                    "In the future, I hope to..."
                 ]
             },
             
             "What would you do if you had unlimited resources?": {
-                "template": "If I had unlimited resources, I would [action].",
-                "vocabulary": ["resources", "funds", "opportunity", "means"],
+                "template": "If I had unlimited resources, I would [action1] and [action2]. I would also [additional action].",
+                "vocabulary": ["resources", "funds", "opportunity", "means", "hypothetical", "conditional", "unlimited"],
                 "grammar_tip": "Use second conditional (if + past simple, would + base verb) for hypothetical situations.",
-                "common_mistakes": ["If I have unlimited resources, I will travel (wrong conditional)"],
+                "common_mistakes": ["If I have unlimited resources, I will travel (wrong conditional)", "I would to travel (should be 'would travel')"],
                 "practice_sentences": [
-                    "If I had unlimited resources, I would travel the world.",
-                    "I would start a charity if I had the means.",
-                    "She would buy a house if she had enough money."
+                    "If I had unlimited resources, I would travel the world and start a charity. I would also help my community.",
+                    "I would start a business if I had the means. I would create jobs for people.",
+                    "She would buy a house if she had enough money. She would also invest in education."
+                ],
+                "sentence_starters": [
+                    "If I had unlimited resources, I would...",
+                    "Given the opportunity, I would...",
+                    "In an ideal world, I would...",
+                    "If money were no object, I would..."
                 ]
             },
             
-            # DEFAULT SCAFFOLDING (para preguntas no mapeadas)
-            "default": {
-                "template": "I think that [your opinion/experience].",
-                "vocabulary": ["think", "believe", "feel", "experience", "opinion"],
-                "grammar_tip": "Use present simple for opinions and general truths.",
-                "common_mistakes": ["I am thinking that (present continuous for temporary thoughts)"],
+            "How do you think technology will affect society in the future?": {
+                "template": "I think technology will [effect1] and [effect2]. However, it might also [potential issue].",
+                "vocabulary": ["technology", "society", "future", "impact", "affect", "transform", "challenge", "opportunity"],
+                "grammar_tip": "Use future simple (will + verb) for predictions. Use 'might' for possibilities.",
+                "common_mistakes": ["Technology affect (missing 'will')", "It will to change (should be 'will change')"],
                 "practice_sentences": [
-                    "I think learning English is important.",
-                    "In my experience, practice helps a lot.",
-                    "She believes education is valuable."
+                    "I think technology will improve healthcare and education. However, it might also create privacy issues.",
+                    "Technology will transform how we work. Remote work will become more common.",
+                    "AI will affect many industries. Some jobs will disappear but new ones will appear."
+                ],
+                "sentence_starters": [
+                    "I think technology will...",
+                    "In my opinion, technology will...",
+                    "Technology is likely to...",
+                    "I believe that in the future..."
                 ]
-            }
+            },
+            
+            # ========== DEFAULT SCAFFOLDING ==========
+            "default": self._generate_default_scaffolding(question_english, tense, question_type, topic, level)
         }
         
-        # Buscar scaffolding específico, usar default si no se encuentra
+        # Buscar scaffolding específico
         if question_english in scaffolding_map:
             scaffolding = scaffolding_map[question_english]
         else:
-            scaffolding = scaffolding_map["default"]
-            # Personalizar el default basado en palabras clave
-            if "do you" in question_english.lower():
-                scaffolding["template"] = "Yes, I do. I usually [your answer]."
-            elif "did you" in question_english.lower():
-                scaffolding["template"] = "Yes, I did. I [past tense action]."
-            elif "will you" in question_english.lower():
-                scaffolding["template"] = "Yes, I will. I plan to [future action]."
-            elif "have you" in question_english.lower():
-                scaffolding["template"] = "Yes, I have. I have [past participle action]."
+            # Generar scaffolding dinámico basado en tipo de pregunta
+            scaffolding = self._generate_dynamic_scaffolding(question_english, tense, question_type, topic, level)
         
         # Añadir información contextual
         scaffolding.update({
             "for_question": question_english,
             "level": level,
-            "tense": self._detect_tense(question_english),
-            "question_type": self._classify_question(question_english),
-            "response_structure": self._get_response_structure(question_english),
-            "useful_phrases": self._get_useful_phrases(question_english, level)
+            "tense": tense,
+            "question_type": question_type,
+            "topic": topic,
+            "response_structure": self._get_response_structure(question_type, tense),
+            "useful_phrases": self._get_useful_phrases(question_type, level)
         })
         
         return scaffolding
     
     def _detect_tense(self, question):
-        """Detecta el tiempo verbal de la pregunta"""
+        """Detecta el tiempo verbal de la pregunta CORRECTAMENTE"""
         question_lower = question.lower()
         
-        if "did" in question_lower:
+        if "did" in question_lower or "was" in question_lower or "were" in question_lower:
             return "past_simple"
-        elif "will" in question_lower or "going to" in question_lower:
+        elif "will" in question_lower:
             return "future_simple"
+        elif "going to" in question_lower:
+            return "future_going_to"
         elif "have" in question_lower and "you" in question_lower:
+            return "present_perfect"
+        elif "has" in question_lower and ("he" in question_lower or "she" in question_lower):
             return "present_perfect"
         elif "are" in question_lower and "ing" in question_lower:
             return "present_continuous"
-        elif "would" in question_lower:
+        elif "would" in question_lower or "could" in question_lower:
             return "conditional"
         elif "had" in question_lower and "you" in question_lower:
             return "past_perfect"
         else:
             return "present_simple"
     
+    def _detect_topic(self, question):
+        """Detecta el tema de la pregunta"""
+        question_lower = question.lower()
+        
+        if any(word in question_lower for word in ["name", "age", "from", "live"]):
+            return "personal"
+        elif any(word in question_lower for word in ["eat", "food", "drink", "restaurant"]):
+            return "food"
+        elif any(word in question_lower for word in ["hobby", "like", "enjoy", "favorite"]):
+            return "hobbies"
+        elif any(word in question_lower for word in ["work", "job", "study", "career"]):
+            return "work_study"
+        elif any(word in question_lower for word in ["travel", "country", "visit", "abroad"]):
+            return "travel"
+        elif any(word in question_lower for word in ["learn", "study", "practice", "skill"]):
+            return "learning"
+        elif any(word in question_lower for word in ["think", "opinion", "believe", "perspective"]):
+            return "opinions"
+        elif any(word in question_lower for word in ["goal", "future", "plan", "aspiration"]):
+            return "goals"
+        else:
+            return "general"
+    
     def _classify_question(self, question):
         """Clasifica el tipo de pregunta"""
         question_lower = question.lower()
         
-        wh_words = ["what", "where", "when", "why", "how", "who", "which"]
-        for word in wh_words:
-            if question_lower.startswith(word):
-                return f"{word}_question"
+        if question_lower.startswith("what"):
+            if "do you" in question_lower:
+                return "what_do_you"
+            elif "did you" in question_lower:
+                return "what_did_you"
+            elif "will you" in question_lower:
+                return "what_will_you"
+            elif "have you" in question_lower:
+                return "what_have_you"
+            elif "is your" in question_lower:
+                return "what_is_your"
+            else:
+                return "what_question"
         
-        if question_lower.startswith("do you") or question_lower.startswith("does") or question_lower.startswith("are you"):
+        elif question_lower.startswith("where"):
+            return "where_question"
+        
+        elif question_lower.startswith("when"):
+            return "when_question"
+        
+        elif question_lower.startswith("why"):
+            return "why_question"
+        
+        elif question_lower.startswith("how"):
+            if "often" in question_lower:
+                return "how_often"
+            elif "long" in question_lower:
+                return "how_long"
+            else:
+                return "how_question"
+        
+        elif question_lower.startswith("do you") or question_lower.startswith("are you"):
             return "yes_no_question"
         
-        if "have you" in question_lower:
+        elif "have you" in question_lower:
             return "experience_question"
         
-        return "open_question"
+        else:
+            return "open_question"
     
-    def _get_response_structure(self, question):
-        """Proporciona estructura de respuesta según tipo de pregunta"""
-        question_type = self._classify_question(question)
+    def _get_response_structure(self, question_type, tense):
+        """Proporciona estructura de respuesta CORRECTA"""
         
         structures = {
-            "what_question": "Answer with a noun or activity: 'I like [noun]' or 'I enjoy [activity]'",
-            "where_question": "Answer with a place: 'I live in [place]' or 'I work at [place]'",
-            "when_question": "Answer with time: 'I wake up at [time]' or 'I will go [day/time]'",
-            "why_question": "Answer with reason: 'Because [reason]' or 'The reason is [explanation]'",
-            "how_question": "Answer with manner or frequency: 'I do it by [method]' or 'I [verb] [frequency]'",
-            "yes_no_question": "Start with Yes/No, then give details: 'Yes, I do. Actually, I...'",
-            "experience_question": "Use present perfect: 'Yes, I have...' or 'No, I haven't...'"
+            "what_do_you": {
+                "present_simple": "Answer with present simple: 'I [verb] [object].' Add details with 'because' or frequency words.",
+                "present_continuous": "Answer with present continuous: 'I am [verb-ing] [object].' Mention current activity."
+            },
+            "what_did_you": {
+                "past_simple": "Answer with past simple: 'I [past verb] [object].' Add time expressions like 'yesterday' or 'last week'."
+            },
+            "what_will_you": {
+                "future_simple": "Answer with 'will': 'I will [verb] [object].' Use 'going to' for plans.",
+                "future_going_to": "Answer with 'going to': 'I am going to [verb] [object].' Mention specific plans."
+            },
+            "what_have_you": {
+                "present_perfect": "Answer with present perfect: 'I have [past participle] [object].' Add 'recently' or 'lately'."
+            },
+            "what_is_your": {
+                "present_simple": "Answer with noun phrase: 'My [noun] is [description].' Add reasons or examples."
+            },
+            "where_question": {
+                "present_simple": "Answer with place: 'I [verb] in/at [place].' Use correct prepositions (in/at/on).",
+                "future_simple": "Answer with future place: 'I will go to [place].' Mention purpose."
+            },
+            "yes_no_question": {
+                "present_simple": "Start with Yes/No: 'Yes, I do. Actually, I...' or 'No, I don't. But I...'",
+                "past_simple": "Start with Yes/No: 'Yes, I did. I [past verb]...' or 'No, I didn't. Instead, I...'",
+                "present_perfect": "Start with Yes/No: 'Yes, I have. I have [past participle]...' or 'No, I haven't. But I would like to...'"
+            },
+            "experience_question": {
+                "present_perfect": "Use present perfect for experiences: 'Yes, I have [past participle]...' or 'No, I have never [past participle]...'"
+            },
+            "why_question": {
+                "general": "Answer with reason: 'Because [reason].' or 'The reason is [explanation].' Use linking words."
+            },
+            "how_question": {
+                "general": "Answer with manner: 'By [method].' or 'I [verb] [adverb].' or 'Through [process].'"
+            }
         }
         
-        return structures.get(question_type, "Give a complete sentence with subject + verb + complement.")
+        # Obtener estructura específica o general
+        if question_type in structures:
+            if isinstance(structures[question_type], dict):
+                return structures[question_type].get(tense, "Give a complete sentence with subject + verb + complement.")
+            else:
+                return structures[question_type]
+        
+        return "Give a complete sentence with subject + verb + complement. Add details to make it interesting."
     
-    def _get_useful_phrases(self, question, level):
+    def _get_useful_phrases(self, question_type, level):
         """Proporciona frases útiles según la pregunta y nivel"""
         
         phrases_by_level = {
@@ -480,38 +646,169 @@ class QuestionDatabase:
                 "I like...",
                 "My favorite...",
                 "Usually, I...",
-                "Sometimes, I..."
+                "Sometimes, I...",
+                "Because...",
+                "For example..."
             ],
             "intermediate": [
                 "In my opinion...",
                 "From my perspective...",
                 "I would say that...",
                 "Generally speaking...",
-                "What I enjoy most is..."
+                "What I enjoy most is...",
+                "Additionally...",
+                "Furthermore..."
             ],
             "advanced": [
                 "From my standpoint...",
                 "Considering the circumstances...",
                 "It could be argued that...",
                 "One might suggest that...",
-                "Taking into account..."
+                "Taking into account...",
+                "On the one hand... on the other hand...",
+                "In conclusion..."
             ]
         }
         
         # Frases específicas por tipo de pregunta
-        question_type = self._classify_question(question)
-        
         specific_phrases = {
-            "what_question": ["What I mean is...", "Specifically, I...", "To be more precise..."],
+            "what_question": ["What I mean is...", "Specifically...", "To be more precise..."],
             "why_question": ["The main reason is...", "This is because...", "Due to the fact that..."],
             "how_question": ["The way I do it is...", "My approach involves...", "Typically, the process is..."],
-            "experience_question": ["Based on my experience...", "What I've found is...", "In my experience..."]
+            "experience_question": ["Based on my experience...", "What I've found is...", "In my experience..."],
+            "yes_no_question": ["Actually...", "In fact...", "To be honest...", "Well..."]
         }
         
         base_phrases = phrases_by_level.get(level, phrases_by_level["beginner"])
         additional_phrases = specific_phrases.get(question_type, [])
         
         return base_phrases + additional_phrases
+    
+    def _generate_default_scaffolding(self, question, tense, question_type, topic, level):
+        """Genera scaffolding por defecto bien estructurado"""
+        
+        templates_by_tense = {
+            "present_simple": "I usually [verb] [object] because [reason].",
+            "past_simple": "Yesterday/last week, I [past verb] [object]. It was [adjective].",
+            "future_simple": "Tomorrow/next week, I will [verb] [object]. I plan to [additional detail].",
+            "present_perfect": "I have [past participle] [object] recently. This has helped me to [benefit].",
+            "conditional": "If I could, I would [verb] [object]. I would also [additional action]."
+        }
+        
+        vocabulary_by_topic = {
+            "personal": ["I", "my", "me", "family", "friends", "home", "life", "experience"],
+            "food": ["eat", "drink", "cook", "restaurant", "meal", "dish", "cuisine", "taste"],
+            "hobbies": ["enjoy", "like", "hobby", "activity", "free time", "relax", "fun", "interest"],
+            "work_study": ["work", "study", "job", "career", "project", "team", "goal", "skill"],
+            "travel": ["travel", "visit", "country", "city", "culture", "experience", "adventure", "sightseeing"],
+            "learning": ["learn", "study", "practice", "improve", "skill", "knowledge", "progress", "achievement"],
+            "opinions": ["think", "believe", "opinion", "perspective", "view", "feel", "consider", "argue"]
+        }
+        
+        grammar_tips_by_tense = {
+            "present_simple": "Use present simple for habits, routines, and general truths.",
+            "past_simple": "Use past simple for completed actions in the past. Add time expressions.",
+            "future_simple": "Use 'will' for predictions and spontaneous decisions. Use 'going to' for plans.",
+            "present_perfect": "Use present perfect for experiences and recent actions with present relevance.",
+            "conditional": "Use second conditional (if + past simple, would + base verb) for hypothetical situations."
+        }
+        
+        return {
+            "template": templates_by_tense.get(tense, "I [verb] [object] because [reason]."),
+            "vocabulary": vocabulary_by_topic.get(topic, ["think", "believe", "experience", "important", "because"]),
+            "grammar_tip": grammar_tips_by_tense.get(tense, "Use complete sentences with subject + verb + complement."),
+            "common_mistakes": [
+                "Forgetting subject-verb agreement",
+                "Missing articles (a/an/the)",
+                "Wrong word order",
+                "Incorrect tense usage"
+            ],
+            "practice_sentences": [
+                "Try to make a complete sentence.",
+                "Add details to explain your answer.",
+                "Use vocabulary related to the topic."
+            ],
+            "sentence_starters": [
+                "I think that...",
+                "In my opinion...",
+                "From my experience...",
+                "What I believe is..."
+            ]
+        }
+    
+    def _generate_dynamic_scaffolding(self, question, tense, question_type, topic, level):
+        """Genera scaffolding dinámico basado en la pregunta"""
+        
+        # Determinar palabras clave
+        question_lower = question.lower()
+        keywords = []
+        
+        for word in question_lower.split():
+            if len(word) > 3 and word not in ["what", "where", "when", "why", "how", "your", "you", "they", "this"]:
+                keywords.append(word)
+        
+        # Generar template basado en tipo de pregunta
+        if question_type.startswith("what"):
+            if "do you" in question_lower:
+                template = f"I usually [verb related to {topic}] because [reason]."
+            elif "did you" in question_lower:
+                template = f"Yesterday/last week, I [past verb related to {topic}]. It was [adjective]."
+            elif "will you" in question_lower:
+                template = f"Tomorrow/next week, I will [verb related to {topic}]. I plan to [additional detail]."
+            elif "have you" in question_lower:
+                template = f"I have [past participle related to {topic}] recently. This has helped me to [benefit]."
+            else:
+                template = f"My answer about {topic} is [your response]. I think this because [reason]."
+        
+        elif question_type.startswith("where"):
+            template = f"I [verb] in/at [place related to {topic}]. This place is [description]."
+        
+        elif question_type.startswith("why"):
+            template = f"Because [reason related to {topic}]. Additionally, [additional reason]."
+        
+        elif question_type.startswith("how"):
+            template = f"I [verb] by [method]. This helps me to [benefit]."
+        
+        else:
+            template = f"I think that [opinion about {topic}]. This is because [reason]."
+        
+        return {
+            "template": template,
+            "vocabulary": keywords[:8] + ["because", "usually", "sometimes", "really", "very"],
+            "grammar_tip": self._get_grammar_tip_for_tense(tense),
+            "common_mistakes": [
+                "Incomplete sentences",
+                "Wrong tense usage",
+                "Missing connecting words",
+                "Limited vocabulary"
+            ],
+            "practice_sentences": [
+                f"Try to answer using the {tense} tense.",
+                "Add specific details to make your answer interesting.",
+                "Use complete sentences with subject and verb."
+            ],
+            "sentence_starters": [
+                "I think that...",
+                "In my experience...",
+                "What I've found is...",
+                "From my perspective..."
+            ]
+        }
+    
+    def _get_grammar_tip_for_tense(self, tense):
+        """Proporciona consejo gramatical específico para el tiempo verbal"""
+        
+        tips = {
+            "present_simple": "Use present simple for habits, routines, facts, and general truths.",
+            "past_simple": "Use past simple for completed actions in the past. Remember irregular verbs.",
+            "future_simple": "Use 'will' for predictions and spontaneous decisions. Don't use 'to' after 'will'.",
+            "present_perfect": "Use present perfect for experiences (ever/never) and recent actions (just/already/yet).",
+            "past_continuous": "Use past continuous for actions in progress at a specific time in the past.",
+            "conditional": "Use second conditional (if + past simple, would + base verb) for hypothetical situations.",
+            "present_continuous": "Use present continuous for actions happening now or around now."
+        }
+        
+        return tips.get(tense, "Use complete sentences with correct tense and word order.")
 
 # Inicializar base de datos de preguntas
 question_db = QuestionDatabase()
@@ -830,13 +1127,13 @@ def home():
     """Página de inicio"""
     return jsonify({
         "status": "online",
-        "service": "Eli English Tutor Backend v13.0",
-        "version": "13.0.0",
+        "service": "Eli English Tutor Backend v14.0",
+        "version": "14.0.0",
         "timestamp": datetime.now().isoformat(),
         "features": [
             "Predefined questions with perfect grammar",
             "Professional Spanish translations",
-            "Question-specific scaffolding",
+            "SPECIFIC and CORRECT scaffolding",
             "Complete backend control",
             "User progress management"
         ],
@@ -957,13 +1254,13 @@ def process_audio():
         # Obtener siguiente pregunta
         next_question_data = question_db.get_question(user_id, next_level)
         
-        # Generar scaffolding si es necesario
+        # Generar scaffolding si es necesario - ¡AHORA CORRECTO!
         scaffolding = None
         if pronunciation_evaluation["needs_scaffolding"]:
             scaffolding = question_db.get_scaffolding_for_question(current_question, user_level)
         
         # Calcular XP ganado
-        xp_earned = self._calculate_xp_earned(
+        xp_earned = _calculate_xp_earned(
             pronunciation_evaluation["score"],
             pronunciation_evaluation["word_count"],
             user_level
@@ -979,7 +1276,7 @@ def process_audio():
         })
         
         # Construir respuesta
-        response_message = self._build_response_message(
+        response_message = _build_response_message(
             user_text,
             pronunciation_evaluation,
             next_question_data,
@@ -1020,85 +1317,61 @@ def process_audio():
     except Exception as e:
         logger.error(f"Error in process-audio: {e}")
         return jsonify({"status": "error", "message": str(e)[:100]}), 500
+
+def _calculate_xp_earned(score, word_count, level):
+    """Calcula XP ganado basado en desempeño"""
+    base_xp = score / 10  # 0-9.5 XP por puntuación
     
-    def _calculate_xp_earned(self, score, word_count, level):
-        """Calcula XP ganado basado en desempeño"""
-        base_xp = score / 10  # 0-9.5 XP por puntuación
-        
-        # Bonificación por longitud
-        length_bonus = min(word_count * 0.5, 10)
-        
-        # Bonificación por nivel
-        level_bonus = {"beginner": 1, "intermediate": 2, "advanced": 3}[level]
-        
-        total_xp = base_xp + length_bonus + level_bonus
-        return round(min(total_xp, 25))  # Máximo 25 XP por respuesta
+    # Bonificación por longitud
+    length_bonus = min(word_count * 0.5, 10)
     
-    def _build_response_message(self, user_text, evaluation, next_question, xp_earned, show_translation):
-        """Construye mensaje de respuesta"""
-        
-        if not user_text or len(user_text.strip()) < 3:
-            return f"""🎤 **I didn't hear you clearly**
+    # Bonificación por nivel
+    level_bonus = {"beginner": 1, "intermediate": 2, "advanced": 3}[level]
+    
+    total_xp = base_xp + length_bonus + level_bonus
+    return round(min(total_xp, 25))  # Máximo 25 XP por respuesta
+
+def _build_response_message(user_text, evaluation, next_question, xp_earned, show_translation):
+    """Construye mensaje de respuesta"""
+    
+    if not user_text or len(user_text.strip()) < 3:
+        return f"""🎤 **I didn't hear you clearly**
 
 💡 **Try this question:** {next_question['english']}
 {f"🇪🇸 **En español:** {next_question['spanish']}" if show_translation else ""}
 
 Speak clearly for 2-3 seconds!"""
-        
-        parts = [
-            f"🎉 **Great!** I heard you say: \"{user_text[:80]}{'...' if len(user_text) > 80 else ''}\"",
-            "",
-            f"📊 **Pronunciation Score:** {evaluation['score']}/100",
-            f"💬 **Feedback:** {evaluation['feedback']}",
-            "",
-            f"⭐ **XP Earned:** +{xp_earned}",
-            "",
-            f"🎯 **Next Question:** {next_question['english']}"
-        ]
-        
-        if show_translation:
-            parts.append(f"🇪🇸 **En español:** {next_question['spanish']}")
-        
-        parts.extend([
-            "",
-            f"📚 **Topic:** {next_question['topic'].replace('_', ' ').title()}",
-            f"⏰ **Tense:** {next_question['tense'].replace('_', ' ').title()}",
-            "",
-            "Keep practicing! 💪"
-        ])
-        
-        return "\n".join(parts)
-
-# Asignar métodos a la función principal
-process_audio._calculate_xp_earned = lambda score, word_count, level: round(min(score / 10 + min(word_count * 0.5, 10) + {"beginner": 1, "intermediate": 2, "advanced": 3}[level], 25))
-process_audio._build_response_message = lambda self, user_text, evaluation, next_question, xp_earned, show_translation: "\n".join([
-    f"🎉 **Great!** I heard you say: \"{user_text[:80]}{'...' if len(user_text) > 80 else ''}\"",
-    "",
-    f"📊 **Pronunciation Score:** {evaluation['score']}/100",
-    f"💬 **Feedback:** {evaluation['feedback']}",
-    "",
-    f"⭐ **XP Earned:** +{xp_earned}",
-    "",
-    f"🎯 **Next Question:** {next_question['english']}",
-    f"🇪🇸 **En español:** {next_question['spanish']}" if show_translation else "",
-    "",
-    f"📚 **Topic:** {next_question['topic'].replace('_', ' ').title()}",
-    f"⏰ **Tense:** {next_question['tense'].replace('_', ' ').title()}",
-    "",
-    "Keep practicing! 💪"
-]) if user_text and len(user_text.strip()) >= 3 else f"""🎤 **I didn't hear you clearly**
-
-💡 **Try this question:** {next_question['english']}
-{f"🇪🇸 **En español:** {next_question['spanish']}" if show_translation else ""}
-
-Speak clearly for 2-3 seconds!"""
+    
+    parts = [
+        f"🎉 **Great!** I heard you say: \"{user_text[:80]}{'...' if len(user_text) > 80 else ''}\"",
+        "",
+        f"📊 **Pronunciation Score:** {evaluation['score']}/100",
+        f"💬 **Feedback:** {evaluation['feedback']}",
+        "",
+        f"⭐ **XP Earned:** +{xp_earned}",
+        "",
+        f"🎯 **Next Question:** {next_question['english']}"
+    ]
+    
+    if show_translation:
+        parts.append(f"🇪🇸 **En español:** {next_question['spanish']}")
+    
+    parts.extend([
+        "",
+        f"📚 **Topic:** {next_question['topic'].replace('_', ' ').title()}",
+        f"⏰ **Tense:** {next_question['tense'].replace('_', ' ').title()}",
+        "",
+        "Keep practicing! 💪"
+    ])
+    
+    return "\n".join(parts)
 
 # ============================================
 # ENDPOINT: SOLICITAR AYUDA (SCAFFOLDING)
 # ============================================
 @app.route('/api/request-help', methods=['POST'])
 def request_help():
-    """Proporciona ayuda específica para la pregunta actual"""
+    """Proporciona ayuda ESPECÍFICA y CORRECTA para la pregunta actual"""
     try:
         data = request.json or {}
         current_question = data.get('current_question', 'What is your name?')
@@ -1121,7 +1394,7 @@ def request_help():
         
         spanish_translation = question_data["spanish"] if question_data else "Traducción no disponible"
         
-        # Generar scaffolding específico
+        # Generar scaffolding ESPECÍFICO - ¡AHORA CORRECTO!
         scaffolding = question_db.get_scaffolding_for_question(current_question, user_level)
         
         # Construir mensaje de ayuda
@@ -1134,7 +1407,7 @@ def request_help():
 "{scaffolding['template']}"
 
 🔤 **Useful Vocabulary:**
-• {', '.join(scaffolding['vocabulary'][:5])}
+• {', '.join(scaffolding['vocabulary'][:8])}
 
 📝 **Grammar Tip:**
 {scaffolding['grammar_tip']}
@@ -1143,7 +1416,10 @@ def request_help():
 {chr(10).join(['• ' + s for s in scaffolding['practice_sentences'][:3]])}
 
 🎯 **Response Structure:**
-{scaffolding['response_structure']}"""
+{scaffolding.get('response_structure', 'Give a complete sentence with subject + verb + complement.')}
+
+🚀 **Sentence Starters:**
+{chr(10).join(['• ' + s for s in scaffolding.get('sentence_starters', ['I think that...', 'In my opinion...'])[:4]])}"""
         
         # Actualizar contador de solicitudes de ayuda
         progress_manager.update_user_progress(user_id, {
@@ -1365,25 +1641,22 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     
     print("=" * 60)
-    print("🚀 ELI ENGLISH TUTOR BACKEND v13.0")
-    print("🎯 CONTROL TOTAL DESDE BACKEND")
+    print("🚀 ELI ENGLISH TUTOR BACKEND v14.0")
+    print("🎯 SCAFFOLDING ESPECÍFICO Y CORRECTO")
     print("=" * 60)
-    print("✅ CARACTERÍSTICAS PRINCIPALES:")
-    print("   1. 100+ preguntas predefinidas con gramática perfecta")
-    print("   2. Traducciones profesionales al español")
-    print("   3. Scaffolding específico por pregunta")
-    print("   4. Gestión completa de progreso desde backend")
-    print("   5. Evaluación inteligente de pronunciación")
-    print("   6. Control total: nivel, XP, traducciones")
+    print("✅ CORRECCIONES APLICADAS:")
+    print("   1. Scaffolding 100% específico por pregunta")
+    print("   2. Templates CORRECTOS para cada tiempo verbal")
+    print("   3. Grammar tips APROPIADOS para el tiempo verbal")
+    print("   4. Vocabulary RELEVANTE al tema")
+    print("   5. Practice sentences CONTEXTUALIZADAS")
+    print("=" * 60)
+    print("📊 EJEMPLOS DE SCAFFOLDING CORREGIDO:")
+    print("   • 'What will you do tomorrow?' → 'Tomorrow, I will [verb]. I also plan to...'")
+    print("   • Grammar tip: 'Use 'will' for spontaneous decisions' ✅")
+    print("   • Vocabulary: ['tomorrow', 'will', 'going to', 'plan to'] ✅")
     print("=" * 60)
     print(f"📡 Servidor ejecutándose en puerto: {port}")
-    print("🌐 URL: http://localhost:{port}/")
-    print("=" * 60)
-    print("📊 Estadísticas iniciales:")
-    print(f"   • Preguntas Beginner: {len(question_db.questions_by_level['beginner'])}")
-    print(f"   • Preguntas Intermediate: {len(question_db.questions_by_level['intermediate'])}")
-    print(f"   • Preguntas Advanced: {len(question_db.questions_by_level['advanced'])}")
-    print(f"   • Total preguntas: {sum(len(q) for q in question_db.questions_by_level.values())}")
     print("=" * 60)
     
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
